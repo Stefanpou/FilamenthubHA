@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- Data-import virker nu også med store backups.
+- Data import now accepts large backups.
+
 ## 0.1.1
 
 - Flyt en eksisterende FilamentHub-installation ind i tilføjelsen (data-import på en ny installation).

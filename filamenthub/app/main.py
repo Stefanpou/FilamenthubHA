@@ -108,6 +108,8 @@ class BodyLimit:
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.inner(scope, receive, send)
+        if config.ADDON and scope.get("path") == "/api/setup/import":
+            return await self.inner(scope, receive, send)   # streamed to disk with its own limit (api_setup.IMPORT_MAX)
         length = dict(scope.get("headers") or []).get(b"content-length", b"")
         if length.isdigit() and int(length) > MAX_BODY:
             return await JSONResponse({"detail": "For stor forespørgsel"}, status_code=413)(scope, receive, send)
