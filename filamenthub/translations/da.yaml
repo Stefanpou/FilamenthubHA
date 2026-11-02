@@ -1,0 +1,6 @@
+configuration:
+  log_level:
+    name: Log-niveau
+    description: Hvor detaljeret loggen skal være (debug, info, warning, error).
+network:
+  8080/tcp: Web-grænseflade uden for Home Assistant (kiosk/telefon). Slået fra som standard.

@@ -1,0 +1,77 @@
+// Shared app state (Svelte 5 runes). Import the objects and mutate their fields.
+import { api, setUnauthorizedHandler, isKiosk } from './api.js';
+
+// ---- toasts ----
+export const toasts = $state([]);
+let toastId = 0;
+export function toast(message, kind = 'ok', ms) {
+  const id = ++toastId;
+  toasts.push({ id, message, kind });
+  setTimeout(() => { const i = toasts.findIndex((t) => t.id === id); if (i >= 0) toasts.splice(i, 1); }, ms ?? (kind === 'err' ? 5500 : 2600));
+}
+export const toastErr = (e) => toast(e?.message || String(e), 'err');
+
+// ---- router (hash: #/path?query) ----
+export const route = $state({ path: '/', query: {} });
+function parseHash() {
+  const raw = location.hash.replace(/^#/, '') || '/';
+  const [p, qs = ''] = raw.split('?');
+  route.path = p.startsWith('/') ? p : '/' + p;
+  route.query = Object.fromEntries(new URLSearchParams(qs));
+}
+export function initRouter() { parseHash(); window.addEventListener('hashchange', parseHash); }
+export function go(path, query) {
+  const qs = query ? '?' + new URLSearchParams(query).toString() : '';
+  location.hash = '#' + path + qs;
+}
+
+// ---- auth ----
+export const auth = $state({ ready: false, authenticated: false, password_set: true, login_required: true, setup_allowed: false });
+export async function loadAuth() {
+  try {
+    const s = await api('api/auth/state');
+    Object.assign(auth, s, { ready: true });
+    // The kiosk (/ha) authenticates by itself (token); it never shows the login.
+  } catch {
+    auth.ready = true;
+  }
+}
+setUnauthorizedHandler(() => { if (!isKiosk()) auth.authenticated = false; else app.error = 'Mangler adgang – tjek token i URL\'en'; });
+
+// ---- data ----
+export const app = $state({ status: null, spools: null, error: '', online: true });
+
+let statusBusy = false;
+export async function refreshStatus() {
+  if (statusBusy) return;
+  statusBusy = true;
+  try {
+    app.status = await api('api/status');
+    app.error = '';
+    app.online = true;
+  } catch (e) {
+    if (e.status === 0) app.online = false;
+    else if (e.status !== 401) app.error = e.message;
+  } finally { statusBusy = false; }
+}
+export async function refreshSpools() {
+  try {
+    const list = await api('api/spools?archived=true');
+    app.spools = Array.isArray(list) ? list : [];
+  } catch (e) {
+    if (app.spools === null) app.spools = [];
+    if (e.status !== 401) app.error = e.message;
+  }
+}
+export const activeSpools = () => (app.spools || []).filter((s) => !s.archived);
+
+let timer = null;
+export function startPolling(ms = 5000) {
+  stopPolling();
+  refreshStatus(); refreshSpools();
+  timer = setInterval(() => { if (!document.hidden) { refreshStatus(); } }, ms);
+  document.addEventListener('visibilitychange', onVis);
+}
+function onVis() { if (!document.hidden) { refreshStatus(); refreshSpools(); } }
+export function stopPolling() { clearInterval(timer); timer = null; document.removeEventListener('visibilitychange', onVis); }
+export async function reloadAll() { await Promise.all([refreshStatus(), refreshSpools()]); }

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# If the app exits, stop the add-on so the Supervisor can restart it per its watchdog policy.
+if [[ "${1}" -ne 0 && "${1}" -ne 256 ]]; then
+  echo "FilamentHub afsluttede med kode ${1}" >&2
+  exec /run/s6/basedir/bin/halt
+fi

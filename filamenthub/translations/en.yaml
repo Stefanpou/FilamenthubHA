@@ -1,0 +1,6 @@
+configuration:
+  log_level:
+    name: Log level
+    description: How verbose the log should be (debug, info, warning, error).
+network:
+  8080/tcp: Web interface outside Home Assistant (kiosk/phone). Disabled by default.

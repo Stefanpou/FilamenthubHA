@@ -1,0 +1,8 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck shell=bash
+export LOG_LEVEL="$(bashio::config 'log_level' | tr '[:lower:]' '[:upper:]')"
+export SPOOLSYNC_DATA_DIR=/data
+export FILAMENTHUB_ADDON=1
+cd /opt/filamenthub
+bashio::log.info "Starter FilamentHub..."
+exec python3 -c "from app.main import run; run()"
