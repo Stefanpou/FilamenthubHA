@@ -279,23 +279,55 @@ class Meter:
         return round(r["k"] * 3_600_000 / r["t"]) if r and r["k"] and r["t"] else None
 
 
-def watts_by_material(db) -> dict[str, dict]:
-    """Average power while printing, per material (the one a print used most of), from prints of 10 min or more:
-    ASA and ABS heat bed and chamber far more than PLA."""
-    rows = db.query(
-        "SELECT p.task_id, p.kwh, p.last_ts - p.first_ts AS secs, "
+def _energy_rows(db) -> list[dict]:
+    """Prints of 10 min or more with energy: kwh, secs, nozzles and the material it used most of."""
+    return db.query(
+        "SELECT p.task_id, p.kwh, p.last_ts - p.first_ts AS secs, p.nozzles, "
         "(SELECT UPPER(TRIM(d.material)) FROM deductions d WHERE d.task_id = p.task_id AND d.state = 'applied' "
         " AND COALESCE(d.material, '') != '' GROUP BY UPPER(TRIM(d.material)) ORDER BY SUM(d.grams) DESC LIMIT 1) AS mat "
         "FROM print_energy p WHERE p.last_ts - p.first_ts >= 600 AND p.kwh > 0")
-    agg: dict[str, list[float]] = {}
+
+
+def _avg(rows) -> dict | None:
+    k, t = sum(r["kwh"] for r in rows), sum(r["secs"] for r in rows)
+    return {"watts": round(k * 3_600_000 / t), "prints": len(rows), "hours": round(t / 3600, 1)} if t > 0 else None
+
+
+def watts_by_material(db, dual: bool = False) -> dict[str, dict]:
+    """Average power while printing, per material (the one a print used most of), from prints of 10 min or more:
+    ASA and ABS heat bed and chamber far more than PLA. `dual`: only prints that used both nozzles (they keep two
+    hotends hot); otherwise only the others (one nozzle, or not known)."""
+    agg: dict[str, list[dict]] = {}
+    for r in _energy_rows(db):
+        if r["mat"] and ((r["nozzles"] or 1) >= 2) == dual:
+            agg.setdefault(r["mat"], []).append(r)
+    return {m: a for m, rows in sorted(agg.items()) if (a := _avg(rows))}
+
+
+def watts_dual(db) -> dict | None:
+    """Average power of all prints that used both nozzles (any material)."""
+    return _avg([r for r in _energy_rows(db) if (r["nozzles"] or 1) >= 2])
+
+
+def note_nozzles(db, tasks: list[dict]) -> int:
+    """Stores how many nozzles each print used (Bambu Cloud task: amsDetailMapping[].nozzleId) on its energy row.
+    Matched by task id, else by title + start time (prints started on the printer have a local task id)."""
+    from .sync import parse_time
+    rows = db.query("SELECT task_id, name, first_ts FROM print_energy WHERE nozzles IS NULL")
+    if not rows or not tasks:
+        return 0
+    by_id = {str(t.get("id")): t for t in tasks if t.get("id")}
+    done = 0
     for r in rows:
-        if r["mat"]:
-            a = agg.setdefault(r["mat"], [0.0, 0.0, 0])
-            a[0] += r["kwh"]
-            a[1] += r["secs"]
-            a[2] += 1
-    return {m: {"watts": round(k * 3_600_000 / t), "prints": n, "hours": round(t / 3600, 1)}
-            for m, (k, t, n) in sorted(agg.items()) if t > 0}
+        t = by_id.get(r["task_id"]) or next(
+            (t for t in tasks if (t.get("title") or "") == (r["name"] or "")
+             and abs((parse_time(t.get("startTime")) or 0) - r["first_ts"]) < 1800), None)
+        ids = {m.get("nozzleId") for m in (t or {}).get("amsDetailMapping") or []
+               if m.get("nozzleId") is not None and (m.get("weight") or 0) > 0}
+        if ids:
+            db.execute("UPDATE print_energy SET nozzles = ? WHERE task_id = ?", (len(ids), r["task_id"]))
+            done += 1
+    return done
 
 
 meter: Meter | None = None
@@ -313,7 +345,7 @@ def energy_for(db, task_ids: list[str]) -> dict[str, dict]:
         return {}
     rows = db.query(f"SELECT * FROM print_energy WHERE task_id IN ({','.join('?' * len(task_ids))})", tuple(task_ids))
     return {r["task_id"]: {"kwh": round(r["kwh"], 3), "cost": round(r["cost"], 2) if r["priced_kwh"] else None,
-                           "hours": round((r["last_ts"] - r["first_ts"]) / 3600, 2)} for r in rows}
+                           "hours": round((r["last_ts"] - r["first_ts"]) / 3600, 2), "nozzles": r.get("nozzles")} for r in rows}
 
 
 # ============================================================================ routes
@@ -394,7 +426,8 @@ def power_now():
     if s and s["task_id"] and s["state"] in ACTIVE_STATES:
         current = energy_for(m.db, [s["task_id"]]).get(s["task_id"])
     return {"configured": configured(cfg), **met.now, "current": current,
-            "avg_watts": met.avg_watts(), "watts": cfg["watts"], "by_material": watts_by_material(m.db)}
+            "avg_watts": met.avg_watts(), "watts": cfg["watts"], "by_material": watts_by_material(m.db),
+            "by_material_dual": watts_by_material(m.db, dual=True), "dual": watts_dual(m.db)}
 
 
 @router.get("/api/power/window")

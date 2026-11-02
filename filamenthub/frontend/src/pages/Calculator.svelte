@@ -12,7 +12,7 @@
   const { spool: _s, grams: _g, ...rest } = saved;
   let f = $state({ hours: '', minutes: '', kg: '120', watts: '', mode: 'pct', pct: '50', fixed: '', ...rest,
     lines: saved.lines?.length ? saved.lines.map((l) => line(l)) : [line({ spool: _s || '', grams: _g || '' })] });
-  let win = $state(null), byMat = $state({}), avgW = $state('147'), measured = $state(null), taskTitle = $state('');
+  let win = $state(null), byMat = $state({}), byMatDual = $state({}), dualAvg = $state(null), avgW = $state('147'), measured = $state(null), taskTitle = $state('');
 
   const num = (v) => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
   const kr = (v) => (v == null ? '–' : `${v.toLocaleString('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kr`);
@@ -25,6 +25,8 @@
       const p = await api('api/power');
       avgW = String(p.avg_watts || p.watts || 147);
       byMat = p.by_material || {};
+      byMatDual = p.by_material_dual || {};
+      dualAvg = p.dual || null;
     } catch { /* default stays */ }
     if (!f.watts) f.watts = avgW;
     const tid = route.query.task;
@@ -37,6 +39,7 @@
           if (used.length) f.lines = used.map((d) => line({ spool: d.spool_id ? String(d.spool_id) : '', grams: String(Math.round(d.grams * 100) / 100) }));
           const hrs = t.energy?.hours || ((Date.parse(t.end_time) - Date.parse(t.start_time)) / 3.6e6) || 0;
           if (hrs > 0) { f.hours = String(Math.floor(hrs)); f.minutes = String(Math.round((hrs % 1) * 60)); }
+          if (t.energy?.nozzles) f.dual = t.energy.nozzles >= 2;
           if (t.energy?.cost != null) measured = t.energy;
         }
       } catch { /* the calculator works without it */ }
@@ -56,10 +59,13 @@
     for (const l of f.lines) { const g = num(l.grams), m = spoolOf(l)?.material; if (m && g > bg) { bg = g; best = String(m).toUpperCase(); } }
     return best;
   });
-  const matData = $derived(mainMat ? byMat[mainMat] : null);
+  // Prints with both nozzles keep two hotends hot: they have their own measurements (only shown when there are any).
+  const hasDual = $derived(!!dualAvg);
+  const dual = $derived(hasDual && !!f.dual);
+  const matData = $derived(mainMat ? (dual ? byMatDual[mainMat] : byMat[mainMat]) || null : null);
   $effect(() => {
     if (f.wattsManual || measured) return;
-    const w = matData?.watts ?? (mainMat ? avgW : null);
+    const w = matData?.watts ?? (dual ? dualAvg?.watts : null) ?? (mainMat ? avgW : null);
     if (w != null && String(Math.round(w)) !== f.watts) f.watts = String(Math.round(w));
   });
 
@@ -112,8 +118,11 @@
           <label class="f">Printtid – minutter<input class="input mono" inputmode="numeric" bind:value={f.minutes} placeholder="0"></label>
           {#if !measured}<label class="f">Gns. printeffekt (W)<input class="input mono" inputmode="decimal" bind:value={f.watts} oninput={() => (f.wattsManual = true)}></label>{/if}
         </div>
+        {#if hasDual && !measured}
+          <label class="row dualsw"><input type="checkbox" bind:checked={f.dual}> Printes med begge dyser <span class="tiny muted">(bruger mere strøm)</span></label>
+        {/if}
         {#if !measured && mainMat}
-          <div class="tiny muted">{matData ? `Målt for ${mainMat}: ${dec(matData.watts, 0)} W (${matData.prints} print, ${dec(matData.hours, 0)} t)` : `Ingen målinger for ${mainMat} endnu – bruger gennemsnittet`}
+          <div class="tiny muted">{matData ? `Målt for ${mainMat}${dual ? ' med 2 dyser' : ''}: ${dec(matData.watts, 0)} W (${matData.prints} print, ${dec(matData.hours, 0)} t)` : dual ? `Ingen målinger for ${mainMat} med 2 dyser endnu – bruger gennemsnittet for 2 dyser (${dec(dualAvg.watts, 0)} W)` : `Ingen målinger for ${mainMat} endnu – bruger gennemsnittet`}
             {#if f.wattsManual} · <a href="#/calc" onclick={(e) => { e.preventDefault(); f.wattsManual = false; }}>Brug målt</a>{/if}</div>
         {/if}
       </section>
@@ -178,4 +187,6 @@
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--panel-border); }
   .seg button { border: 0; padding: 9px; border-radius: 10px; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
   .seg button.on { background: var(--accent); color: #061018; }
+  .dualsw { gap: 8px; font-size: 14px; align-items: center; }
+  .dualsw input { width: 18px; height: 18px; accent-color: var(--accent); }
 </style>

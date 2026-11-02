@@ -133,7 +133,8 @@ class Database:
                                     "state_log": "TEXT", "feed_log": "TEXT", "runout_events": "TEXT"},
                   "assignments": {"end_reason": "TEXT", "decided_ts": "REAL", "spool_registered": "TEXT"},
                   "deductions": {"spool_registered": "TEXT"}, "barcodes": {"filament_registered": "TEXT"},
-                  "fm_links": {"spool_registered": "TEXT"}}
+                  "fm_links": {"spool_registered": "TEXT"},
+                  "print_energy": {"nozzles": "INTEGER"}}   # nozzles the print used (Bambu Cloud), NULL = not known
         for table, cols in wanted.items():
             have = {r[1] for r in self._conn.execute(f"PRAGMA table_info({table})").fetchall()}
             for col, typ in cols.items():

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+- Strømforbrug måles separat for print med begge dyser (X2D/H2D), og prisberegneren kan regne med det.
+- Power use is measured separately for prints that use both nozzles; the price calculator can use it.
+
 ## 0.1.3
 
 - Printerens 3D-model og forsidebillede vises nu i Home Assistant.

@@ -976,6 +976,11 @@ class Engine:
             log.warning("task poll failed: %s", e)
             return {"error": str(e)}
         self.last_task_poll_ok = time.time()
+        try:
+            from .power import note_nozzles
+            note_nozzles(self.db, tasks)        # 1 or 2 nozzles per print: dual-nozzle prints draw more power
+        except Exception:  # noqa: BLE001 - never let this stop filament accounting
+            log.exception("noting nozzles failed")
         baseline = float(self.db.get("baseline_ts") or time.time())
         live = print_summary(self.state) if self.state else {"task_id": "", "state": ""}
         done = 0
