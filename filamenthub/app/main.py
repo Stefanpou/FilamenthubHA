@@ -134,7 +134,10 @@ async def guard(request: Request, call_next):
         # /api/v1 (Spoolman-compatible API): non-browser clients (HA, OrcaSlicer) may send DELETE/PUT without a body or
         # media type; a browser always sends Sec-Fetch-Site, which is checked below.
         v1 = path == auth.API_PREFIX or path.startswith(auth.API_PREFIX + "/")
-        if (request.method not in ("GET", "HEAD") and media != "application/json"
+        # The add-on data import (/api/setup/import) is a gzip upload; a cross-site page cannot send that type without
+        # a CORS preflight, so this keeps the same protection as requiring JSON.
+        upload = path == "/api/setup/import" and media == "application/gzip"
+        if (request.method not in ("GET", "HEAD") and media != "application/json" and not upload
                 and not (v1 and "sec-fetch-site" not in request.headers)):
             return JSONResponse({"detail": "JSON påkrævet"}, status_code=415)
         site = request.headers.get("sec-fetch-site")

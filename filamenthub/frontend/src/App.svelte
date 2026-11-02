@@ -19,6 +19,7 @@
   const NAV = [
     { path: '/', label: 'Overblik', icon: 'home' },
     { path: '/inventory', label: 'Lager', icon: 'box' },
+    { path: '/library', label: 'Bibliotek', icon: 'image' },
     { path: '/add', label: 'Tilføj', icon: 'plus', cta: true },
     { path: '/history', label: 'Historik', icon: 'chart' },
     { path: '/calc', label: 'Pris', icon: 'calc' },

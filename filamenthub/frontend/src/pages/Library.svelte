@@ -53,8 +53,7 @@
 </script>
 
 <div class="page stack" style="gap:16px">
-  <div class="row between"><h1>Printbibliotek</h1>
-    <button class="btn small" onclick={() => go('/history', { tab: 'prints' })}><Icon name="back" size={16} /> Historik</button></div>
+  <h1>Printbibliotek</h1>
   <div class="search"><span class="ico"><Icon name="search" size={18} /></span>
     <input class="input" type="search" placeholder="Søg i prints …" bind:value={q} oninput={search}></div>
 
