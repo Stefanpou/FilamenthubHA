@@ -45,6 +45,8 @@
   const nozName = (i) => ((p?.nozzles?.length || 0) < 2 ? 'Dyse' : i === 1 ? 'Venstre dyse' : i === 0 ? 'Højre dyse' : `Dyse ${i + 1}`);
   const unit0 = $derived(ams[0] || null);
   const family = $derived(printerFamily(p));
+  // The API gives "/api/printer/..."; relative keeps it under the Home Assistant Ingress prefix (<base href>).
+  const rel = (u) => (u ? u.replace(/^\//, '') : u);
   const jobLabel = $derived(model?.job === 'last' && !busy ? 'Seneste print' : '');
 </script>
 
@@ -80,7 +82,7 @@
 
   <div class="frame glass">
     {#snippet canvas()}
-      <ModelCanvas modelUrl={model?.model_url} coverUrl={model?.cover_url} taskKey={model?.task_id || ''}
+      <ModelCanvas modelUrl={rel(model?.model_url)} coverUrl={rel(model?.cover_url)} taskKey={model?.task_id || ''}
         progress={shownProgress} printing={p?.gcode_state === 'RUNNING'} color={filamentColor} {still} {compact}
         layer={busy ? p?.layer || 0 : 0} totalLayers={busy ? p?.total_layers || 0 : 0} percent={busy ? pct : null} />
     {/snippet}

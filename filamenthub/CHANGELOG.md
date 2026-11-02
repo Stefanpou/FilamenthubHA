@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+- Printerens 3D-model og forsidebillede vises nu i Home Assistant.
+- The printer 3D model and cover image now load inside Home Assistant.
+
 ## 0.1.2
 
 - Data-import virker nu også med store backups.
