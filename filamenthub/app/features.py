@@ -364,6 +364,9 @@ def plug_state():
             "name": (st.get("attributes") or {}).get("friendly_name") or cfg["plug_entity"]}
 
 
+PLUG_WAIT_STEPS = 20    # x 0.25 s
+
+
 class PlugIn(BaseModel):
     on: bool
     force: bool = False
@@ -382,7 +385,14 @@ def plug_set(body: PlugIn):
             raise HTTPException(409, "Printeren er i gang med et print – sluk alligevel?")
     _ha(m.db).call("switch", "turn_on" if body.on else "turn_off", cfg["plug_entity"])
     m.db.event("info", f"Printerens stik {'tændt' if body.on else 'slukket'} fra appen")
-    return plug_state() | {"on": body.on}
+    # A smart plug reports its new state a moment after the call: wait for it, so the button shows what happened.
+    st = plug_state()
+    for _ in range(PLUG_WAIT_STEPS):
+        if st.get("on") == body.on:
+            break
+        time.sleep(0.25)
+        st = plug_state()
+    return st | {"on": body.on} if st.get("on") != body.on and st.get("state") not in ("unavailable", "unknown") else st
 
 
 def _deductions(db, task_ids: list[str]) -> dict[str, list[dict]]:

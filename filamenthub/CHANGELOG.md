@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5
+
+- Tænd/sluk-knappen til stikket viser den nye tilstand efter ét tryk.
+- The plug on/off button shows the new state after one tap.
+
 ## 0.1.4
 
 - Strømforbrug måles separat for print med begge dyser (X2D/H2D), og prisberegneren kan regne med det.

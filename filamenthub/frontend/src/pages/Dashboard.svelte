@@ -24,10 +24,12 @@
     const on = !plug.on;
     pbusy = true;
     try {
-      try { await post('api/plug', { on }); } catch (e) {
-        if (e.status === 409 && confirm(e.message)) await post('api/plug', { on, force: true }); else if (e.status !== 409) throw e; else return;
+      let r;
+      try { r = await post('api/plug', { on }); } catch (e) {
+        if (e.status === 409 && confirm(e.message)) r = await post('api/plug', { on, force: true }); else if (e.status !== 409) throw e; else return;
       }
-      await loadPlug();
+      plug = r;                                   // (the server waits until the plug reports its new state)
+      setTimeout(loadPlug, 4000);
     } catch (e) { toastErr(e); } finally { pbusy = false; }
   }
   onMount(async () => {
