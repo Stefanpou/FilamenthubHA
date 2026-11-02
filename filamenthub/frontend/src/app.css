@@ -32,7 +32,11 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
-body { overflow-x: hidden; }
+/* No sideways scrolling on a phone: nothing may make the page wider than the screen (clip), no sideways rubber-band,
+   and the page itself only pans vertically (strips with their own horizontal scroll still swipe). */
+html, body { overflow-x: hidden; overscroll-behavior-x: none; }
+body { touch-action: pan-y pinch-zoom; }
+.shell, main { overflow-x: clip; }
 h1, h2, h3, h4 { margin: 0; letter-spacing: -0.02em; font-weight: 700; }
 p { margin: 0; }
 a { color: var(--accent); text-decoration: none; }

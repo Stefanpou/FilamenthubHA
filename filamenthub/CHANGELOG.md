@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6
+
+- Siden kan ikke længere scrolles sidelæns på mobil.
+- The page can no longer be scrolled sideways on a phone.
+
 ## 0.1.5
 
 - Tænd/sluk-knappen til stikket viser den nye tilstand efter ét tryk.
