@@ -25,7 +25,10 @@
   const slots = $derived(d?.slots || []);
   const ams = $derived(d?.ams || []);
   const model = $derived(d?.model || null);
-  const tone = $derived(p?.online === false ? 'idle' : STATE_TONE[p?.gcode_state] || 'idle');
+  // Preparation / pause step from the printer (stg_cur); "Forbereder" until the first layer.
+  const stage = $derived(p?.online === false ? null : p?.stage || null);
+  const preparing = $derived(!!stage && !stage.pause && !p?.layer);
+  const tone = $derived(p?.online === false ? 'idle' : stage?.pause ? 'warn' : preparing ? 'prep' : STATE_TONE[p?.gcode_state] || 'idle');
   const activeSlot = $derived(slots.find((s) => s.active) || null);
   const busy = $derived(['RUNNING', 'PAUSE', 'PREPARE'].includes(p?.gcode_state));
   const layerFrac = $derived.by(() => {
@@ -63,6 +66,16 @@
     <div class="title">
       <div class="pill">{stateText}</div>
       <h3 class="ellipsis">{p?.job_name || (p?.online === false ? 'Printeren er offline' : 'Ingen aktivt print')}</h3>
+      {#if stage}
+        <div class="stage-now"><i class="spin" class:paused={stage.pause}></i><span>{stage.label}</span></div>
+        {#if !compact && stage.steps.length > 1}
+          <ol class="steps">
+            {#each stage.steps as st, i (i)}
+              <li class={st.status}><i></i>{st.label}</li>
+            {/each}
+          </ol>
+        {/if}
+      {/if}
       <div class="sub muted">
         {#if busy}
           <span>{fmtRemaining(p?.remaining_min)} tilbage</span>{#if eta}<span>færdig {eta}</span>{/if}
@@ -150,6 +163,20 @@
     background: color-mix(in srgb, var(--tone) 14%, transparent); border: 1px solid color-mix(in srgb, var(--tone) 38%, transparent);
     padding: 1px 9px; border-radius: 99px; }
   .sub { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; }
+  .stage-now { display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600; color: var(--tone); margin: 2px 0 3px; }
+  .spin { width: 11px; height: 11px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--tone) 30%, transparent);
+    border-top-color: var(--tone); animation: spin 0.9s linear infinite; }
+  .spin.paused { animation: none; border-color: var(--tone); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .steps { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; }
+  .steps li { display: flex; align-items: center; gap: 7px; color: var(--muted); }
+  .steps li i { width: 8px; height: 8px; flex: none; border-radius: 50%; border: 1.5px solid var(--panel-border); }
+  .steps li.done { opacity: .65; }
+  .steps li.done i { background: var(--ok); border-color: var(--ok); }
+  .steps li.current { color: var(--text, inherit); font-weight: 600; }
+  .steps li.current i { background: var(--tone); border-color: var(--tone); box-shadow: 0 0 8px var(--tone); animation: blink 1.2s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .spin, .steps li.current i { animation: none; } }
   .mini { display: flex; gap: 10px; font-size: 13px; color: var(--text-dim, var(--muted)); }
   .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

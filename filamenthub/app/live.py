@@ -41,6 +41,32 @@ CACHE_KEEP = 12          # task directories kept in DATA_DIR/live
 CACHE_MAX_BYTES = 120 * 1024 * 1024
 GCODE_STATES_DA = {"IDLE": "Klar", "RUNNING": "Printer", "PAUSE": "Pause", "FINISH": "Færdig", "FAILED": "Fejl",
                    "PREPARE": "Forbereder", "SLICING": "Forbereder"}
+# Bambu `stg_cur` / `stg` codes (the steps before and between printing), as in ha-bambulab's CURRENT_STAGE_IDS.
+STAGES_DA = {
+    1: "Automatisk nivellering af pladen", 2: "Opvarmer printpladen", 3: "Kalibrerer XY-mekanikken",
+    4: "Skifter filament", 5: "Pause (M400)", 6: "Pause: filamentet er sluppet op", 7: "Opvarmer dysen",
+    8: "Kalibrerer ekstrudering", 9: "Scanner printpladen", 10: "Tjekker første lag",
+    11: "Genkender pladetypen", 12: "Kalibrerer Micro Lidar", 13: "Hjemkører printhovedet",
+    14: "Rengør dysespidsen", 15: "Tjekker dysetemperaturen", 16: "Sat på pause", 17: "Pause: frontlågen faldt af",
+    18: "Kalibrerer Micro Lidar", 19: "Kalibrerer flow", 20: "Pause: fejl i dysetemperaturen",
+    21: "Pause: fejl i pladetemperaturen", 22: "Aflæsser filament", 23: "Pause: motoren sprang trin over",
+    24: "Indlæser filament", 25: "Kalibrerer motorstøj", 26: "Pause: AMS mistet", 27: "Pause: lav blæserhastighed",
+    28: "Pause: fejl i kammertemperaturen", 29: "Køler kammeret", 30: "Pause fra G-code",
+    31: "Demonstrerer motorstøj", 32: "Pause: filament på dysen", 33: "Pause: fejl i skæreren",
+    34: "Pause: fejl i første lag", 35: "Pause: dysen er tilstoppet", 36: "Tjekker præcision før kalibrering",
+    37: "Kalibrerer præcision", 38: "Tjekker præcision efter kalibrering", 39: "Kalibrerer dyseforskydning",
+    40: "Nivellerer pladen ved høj temperatur", 41: "Tjekker hurtigudløseren", 42: "Tjekker låge og låg",
+    43: "Kalibrerer laser", 44: "Tjekker laserpladen", 45: "Tjekker kameraets position", 46: "Kalibrerer kameraet",
+    47: "Nivellerer pladen (fase 1)", 48: "Nivellerer pladen (fase 2)", 49: "Opvarmer kammeret",
+    50: "Køler printpladen", 51: "Printer kalibreringslinjer", 52: "Tjekker materialet",
+    53: "Kalibrerer livekameraet", 54: "Venter på pladetemperaturen", 55: "Tjekker materialets position",
+    56: "Kalibrerer skæremodulet", 57: "Måler overfladen", 58: "Termisk forkonditionering",
+    59: "Hjemkører knivholderen", 60: "Kalibrerer kameraforskydning", 61: "Kalibrerer knivholderens position",
+    62: "Tester skift af hotend", 63: "Venter på jævn kammertemperatur", 64: "Klargør hotend",
+    65: "Kalibrerer klumpdetektion på dysen", 66: "Renser kammerluften",
+}
+PAUSE_STAGES = {5, 6, 16, 17, 20, 21, 23, 26, 27, 28, 30, 32, 33, 34, 35}
+NO_STAGE = {0, -1, 255}         # printing / idle
 
 
 # ============================================================================ state -> JSON
@@ -179,6 +205,25 @@ def parse_extras(state: dict) -> dict:
     return out
 
 
+def parse_stage(state: dict, gcode_state: str) -> dict | None:
+    """The step the printer is doing outside of printing (heating, levelling, calibrating, ...) and the steps it has
+    planned for this job (`stg`): {code, label, pause, steps: [{code, label, status: done|current|todo}]}."""
+    if gcode_state not in ("RUNNING", "PREPARE", "PAUSE", "SLICING"):
+        return None
+    code = _num(state.get("stg_cur"))
+    if code is None or int(code) in NO_STAGE:
+        return None
+    code = int(code)
+    planned = [int(c) for c in (state.get("stg") or []) if isinstance(c, (int, float)) and int(c) not in NO_STAGE]
+    steps = []
+    if code in planned:
+        at = planned.index(code)
+        for i, c in enumerate(planned):
+            steps.append({"code": c, "label": STAGES_DA.get(c, f"Trin {c}"),
+                          "status": "done" if i < at else "current" if i == at else "todo"})
+    return {"code": code, "label": STAGES_DA.get(code, f"Trin {code}"), "pause": code in PAUSE_STAGES, "steps": steps}
+
+
 def printer_block(state: dict, device: dict | None, online: bool) -> dict:
     s = print_summary(state) if state else {"state": "UNKNOWN", "percent": 0, "remaining_min": 0, "name": "",
                                             "layer": 0, "total_layers": 0}
@@ -192,13 +237,15 @@ def printer_block(state: dict, device: dict | None, online: bool) -> dict:
     dev = device or {}
     model = model_name(dev.get("model") or dev.get("model_code"), dev.get("serial")) or "Bambu Lab printer"
     nozzles = parse_nozzles(state)
+    stage = parse_stage(state, gs)
     block = {
         "name": dev.get("name") or model,
         "model": model,
         "family": model_family(model, len(nozzles)),
         "online": bool(online),
         "gcode_state": gs,
-        "state_da": GCODE_STATES_DA.get(gs, "Ukendt"),
+        "state_da": "Forbereder" if stage and not stage["pause"] and gs == "RUNNING" and not layer else GCODE_STATES_DA.get(gs, "Ukendt"),
+        "stage": stage,
         "percent": s["percent"],
         "remaining_min": s["remaining_min"],
         "layer": layer,

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7
+
+- Overblik viser, hvad printeren gør før printet starter (opvarmning, nivellering, kalibrering …) og listen over de planlagte trin.
+- The dashboard shows what the printer is doing before the print starts (heating, levelling, calibration …) and the list of planned steps.
+
 ## 0.1.6
 
 - Siden kan ikke længere scrolles sidelæns på mobil.
