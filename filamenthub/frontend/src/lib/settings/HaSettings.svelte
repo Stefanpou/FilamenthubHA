@@ -4,7 +4,8 @@
   import { toast, toastErr } from '../stores.svelte.js';
   import { onMount } from 'svelte';
   let cfg = $state(null), exists = $state(false), draft = $state({}), busy = $state(false);
-  const kiosk = `${location.origin}/ha`;
+  // Relative to <base href>: also correct under the Home Assistant Ingress prefix.
+  const kiosk = new URL('ha', document.baseURI).href;
   onMount(async () => {
     try { cfg = await api('api/ha/settings'); exists = true; draft = { ...cfg }; } catch { exists = false; }
   });
@@ -21,7 +22,7 @@
   <p class="small muted">Vis printeren og dit lager i Home Assistant med et iframe-kort. Kiosk-visningen har ingen menuer og en gennemsigtig baggrund.</p>
   <div class="f">Kiosk-adresse
     <div class="row"><input class="input mono" readonly value={kiosk}><button class="btn" onclick={() => copy(kiosk)}>Kopiér</button></div></div>
-  <a class="btn" href="/ha" target="_blank" rel="noopener">Åbn kiosk-visning</a>
+  <a class="btn" href="ha" target="_blank" rel="noopener">Åbn kiosk-visning</a>
   {#if exists}
     <hr>
     {#each keys as k}

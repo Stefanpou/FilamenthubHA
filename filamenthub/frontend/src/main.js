@@ -11,7 +11,7 @@ const bundle = () => [...document.scripts].map((x) => x.src).find((x) => x.inclu
 async function checkVersion() {
   if (document.hidden) return;
   try {
-    const html = await (await fetch('/', { cache: 'no-store' })).text();
+    const html = await (await fetch('./', { cache: 'no-store' })).text();
     const m = html.match(/assets\/index-[^"]+\.js/);
     const mine = bundle();
     if (m && mine && !mine.endsWith(m[0])) location.reload();

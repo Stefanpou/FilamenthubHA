@@ -482,7 +482,9 @@ class ModelCache:
     def _run(self, job: dict, engine) -> None:
         tid = str(job["task_id"])
         try:
-            self.fetch(job, engine.cloud, (engine.device or {}).get("serial"))
+            meta = self.fetch(job, engine.cloud, (engine.device or {}).get("serial"))
+            if not meta.get("ok"):   # neither picture nor model: retry with backoff instead of on every snapshot
+                raise model3d.ModelError(meta.get("error") or "intet billede eller model")
             with self._lock:
                 self._jobs[tid] = {"status": "ready", "attempts": 0, "next_try": 0, "error": ""}
             self.prune(keep=tid)
@@ -521,11 +523,11 @@ class ModelCache:
         if task and task.get("plateIndex"):
             plate = int(task["plateIndex"]) if not job.get("plate") else plate
         if not profile_id or not model_id or str(profile_id) == "0":
-            raise CloudError("Jobbet har ingen skyprofil")
+            return self._cover_only(job, task, cloud, plate, "Jobbet har ingen skyprofil")
         prof = cloud.get_profile(profile_id, model_id)
         url = prof.get("url")
         if not url:
-            raise CloudError("Profilen har ingen fil")
+            return self._cover_only(job, task, cloud, plate, "Profilen har ingen fil")
         cfg = cloud.download(url, max_bytes=30 * 1024 * 1024)
         try:
             zf = zipfile.ZipFile(io.BytesIO(cfg))
@@ -584,6 +586,21 @@ class ModelCache:
             (d / "model.bin").write_bytes(blob)
         meta = {"ok": bool(cover or blob), "kind": kind, "plate": plate, "task_id": tid, "name": name,
                 "error": err, "ts": time.time()}
+        (d / "meta.json").write_text(json.dumps(meta))
+        return meta
+
+    def _cover_only(self, job: dict, task: dict | None, cloud: BambuCloud, plate: int, why: str) -> dict:
+        """Jobs without a project file (e.g. "cloud_file" sent from Bambu Studio, local files): show at least the
+        task's cover picture."""
+        if not (task or {}).get("cover"):
+            raise CloudError(why)
+        tid = str(job["task_id"])
+        cover = cloud.download(task["cover"], max_bytes=5 * 1024 * 1024)
+        d = self._dir(tid)
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "cover.png").write_bytes(cover)
+        meta = {"ok": True, "kind": "cover", "plate": plate, "task_id": tid,
+                "name": task.get("title") or job.get("name") or "", "error": why, "ts": time.time()}
         (d / "meta.json").write_text(json.dumps(meta))
         return meta
 

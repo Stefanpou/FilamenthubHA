@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.8
+
+- Billedet af pladen prøves op til 5 gange over 5 minutter, hvis kameraet ikke svarer lige når printet slutter. Stikket slukkes først, når billedet er taget.
+- Print uden projektfil i Bambu Cloud viser printets forsidebillede på Overblik i stedet for ingenting.
+- Appen genindlæses automatisk efter en opdatering, også i Home Assistant.
+- Kiosk-adressen under Indstillinger peger på den rigtige adresse i Home Assistant.
+- Stikket kan også være en `light.`-enhed; kamerafeltet accepterer kun kameraer.
+- Adgangskode og login til appen skjules i Home Assistant, hvor HA står for login.
+- The plate photo is retried up to 5 times over 5 minutes if the camera does not answer right at the finish; the plug waits for it.
+- Prints without a project file in Bambu Cloud show the print's cover picture on the dashboard.
+- The app reloads itself after an update, also inside Home Assistant.
+- The kiosk address in Settings is correct inside Home Assistant.
+- The plug may be a `light.` entity; the camera field only accepts cameras.
+- App password and login settings are hidden inside Home Assistant, which handles the login.
+
 ## 0.1.7
 
 - Overblik viser, hvad printeren gør før printet starter (opvarmning, nivellering, kalibrering …) og listen over de planlagte trin.

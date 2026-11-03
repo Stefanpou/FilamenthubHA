@@ -201,6 +201,7 @@ def auth_state(request: Request):
         "authenticated": (not auth.login_required(db) or auth.is_ingress(request)
                           or auth.valid_session(db, request.cookies.get(auth.COOKIE))),
         "setup_allowed": auth.is_local(request),
+        "ingress": auth.is_ingress(request),   # inside Home Assistant: HA does the login, no app password
     }
 
 

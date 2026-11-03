@@ -38,7 +38,7 @@
     try { ft = await api('api/features'); if (ft.photo || ft.library) latest = (await api('api/library/latest')) || false; } catch { latest = false; }
     return () => clearInterval(iv);
   });
-  const imgOf = (e) => (e.has_photo ? `api/library/${e.task_id}/photo.jpg` : `api/library/${e.task_id}/cover.png`);
+  const imgOf = (e) => (e.has_photo ? `api/library/${e.task_id}/photo.jpg?v=${Math.round(e.photo_ts || 0)}` : `api/library/${e.task_id}/cover.png`);
   const kr = (v) => v.toLocaleString('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const grams = (t) => (t.deductions || []).filter((d) => d.state === 'applied').reduce((a, d) => a + d.grams, 0);
 </script>

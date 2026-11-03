@@ -382,6 +382,8 @@ def save_settings(body: PowerSettingsIn):
             v = v.strip().rstrip("/")
             if v and not v.startswith(("http://", "https://")):
                 raise HTTPException(400, "Adressen skal starte med http:// eller https://")
+            if v == SUPERVISOR_URL:   # the add-on fallback shown by GET is never stored
+                continue
         cfg[k] = v.strip() if isinstance(v, str) else v
     m.db.set(KEY, {k: cfg[k] for k in DEFAULTS})
     try:

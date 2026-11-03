@@ -37,6 +37,7 @@ DEFAULTS = {"plug": False, "plug_entity": "", "auto_off": False, "off_delay_min"
             "photo": False, "camera_entity": "", "library": False}
 WATCH = 10.0                 # seconds between looks at the printer state
 ARCHIVE_TRIES = (60, 120, 300, 600, 1200, 1800)   # Bambu Cloud lists a task a little after it ends
+PHOTO_TRIES = (0, 20, 60, 180, 300)   # seconds after the end: the Bambu camera in HA often fails right at the finish
 MAX_FILE = 150 * 1024 * 1024
 FILES = {"photo.jpg": "image/jpeg", "cover.png": "image/png", "model.3mf": "application/vnd.ms-package.3dmanufacturing-3dmodel+xml"}
 
@@ -94,6 +95,11 @@ def _iso_ts(v) -> float | None:
 
 
 # ============================================================================ the work
+def _domain(entity: str) -> str:
+    """HA service domain of the plug entity (a switch, or a light used as one)."""
+    return entity.split(".", 1)[0] if entity.startswith("light.") else "switch"
+
+
 def take_photo(db, task_id: str, name: str = "") -> dict:
     """Store a still from the camera as the print's photo."""
     cfg = settings(db)
@@ -210,7 +216,7 @@ class Watcher:
         cfg = settings(self.db)
         cur = (s["task_id"], s["state"]) if s else None
         if cur and self.prev and cur != self.prev and s["state"] == "FINISH" and self.prev[1] in ACTIVE_STATES and s["task_id"]:
-            self.pending = {"task_id": s["task_id"], "name": s["name"], "end": now, "photo": False,
+            self.pending = {"task_id": s["task_id"], "name": s["name"], "end": now, "photo": False, "photo_try": 0,
                             "archive_try": 0, "next_archive": now + ARCHIVE_TRIES[0], "archived": False, "off": False}
             self.db.event("info", f"Print færdigt: {s['name'] or s['task_id']}")
             self._save()
@@ -223,26 +229,32 @@ class Watcher:
             self.pending = None   # a new print started: the old one is done with (and the plug stays on)
             self._save()
             return
-        if cfg["photo"] and not p["photo"]:
-            p["photo"] = True   # one attempt: a failed photo must not keep the plug on
+        if cfg["photo"] and not p["photo"] and now >= p["end"] + PHOTO_TRIES[min(p.get("photo_try", 0), len(PHOTO_TRIES) - 1)]:
+            p["photo_try"] = p.get("photo_try", 0) + 1
             try:
                 take_photo(self.db, p["task_id"], p["name"])
+                p["photo"] = True
             except Exception as e:
-                self.db.event("warn", f"Kunne ikke tage billede af pladen: {getattr(e, 'detail', type(e).__name__)}")
+                if p["photo_try"] >= len(PHOTO_TRIES):   # give up: a failed photo must not keep the plug on
+                    p["photo"] = True
+                    self.db.event("warning", f"Kunne ikke tage billede af pladen efter {p['photo_try']} forsøg: "
+                                          f"{getattr(e, 'detail', type(e).__name__)}")
+                else:
+                    log.info("plate photo attempt %d failed: %s", p["photo_try"], getattr(e, "detail", type(e).__name__))
             self._save()
         if cfg["library"] and not p["archived"] and now >= p["next_archive"]:
             self._try_archive(engine, p, now)
-        if cfg["plug"] and cfg["auto_off"] and cfg["plug_entity"] and not p["off"]:
+        if cfg["plug"] and cfg["auto_off"] and cfg["plug_entity"] and not p["off"] and (p["photo"] or not cfg["photo"]):
             waited = now - p["end"]
             cool = bool(temps) and max(temps) <= float(cfg["off_max_temp"])
             if waited >= float(cfg["off_delay_min"]) * 60 and (cool or waited >= (float(cfg["off_delay_min"]) + 20) * 60):
                 p["off"] = True
                 try:
-                    _ha(self.db).call("switch", "turn_off", cfg["plug_entity"])
+                    _ha(self.db).call(_domain(cfg["plug_entity"]), "turn_off", cfg["plug_entity"])
                     self.db.event("info", f"Printerens stik slukket {round(waited / 60)} min efter printet"
                                           + (f" (dysen {max(temps):.0f} °C)" if temps else ""))
                 except Exception as e:
-                    self.db.event("warn", f"Kunne ikke slukke printerens stik: {getattr(e, 'detail', type(e).__name__)}")
+                    self.db.event("warning", f"Kunne ikke slukke printerens stik: {getattr(e, 'detail', type(e).__name__)}")
                 self._save()
         done = ((p["photo"] or not cfg["photo"]) and (p["archived"] or not cfg["library"] or p["archive_try"] >= len(ARCHIVE_TRIES))
                 and (p["off"] or not (cfg["plug"] and cfg["auto_off"] and cfg["plug_entity"])))
@@ -327,7 +339,7 @@ def save_features(body: FeaturesIn):
     for k, v in body.model_dump(exclude_none=True).items():
         if k.endswith("_entity"):
             v = v.strip()
-            if v and not re.fullmatch(r"(switch|light|camera)\.[a-z0-9_]+", v):
+            if v and not re.fullmatch(r"camera\.[a-z0-9_]+" if k == "camera_entity" else r"(switch|light)\.[a-z0-9_]+", v):
                 raise HTTPException(400, f"Ugyldig enhed: {v}")
         cfg[k] = v
     db.set(KEY, {k: cfg[k] for k in DEFAULTS})
@@ -383,7 +395,7 @@ def plug_set(body: PlugIn):
             s = print_summary(m.engine.state) if m.engine.state else None
         if s and s["state"] in ACTIVE_STATES:
             raise HTTPException(409, "Printeren er i gang med et print – sluk alligevel?")
-    _ha(m.db).call("switch", "turn_on" if body.on else "turn_off", cfg["plug_entity"])
+    _ha(m.db).call(_domain(cfg["plug_entity"]), "turn_on" if body.on else "turn_off", cfg["plug_entity"])
     m.db.event("info", f"Printerens stik {'tændt' if body.on else 'slukket'} fra appen")
     # A smart plug reports its new state a moment after the call: wait for it, so the button shows what happened.
     st = plug_state()

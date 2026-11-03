@@ -85,6 +85,7 @@
   <section class="glass pad stack rise" style="--i:3"><h2><Icon name="bolt" size={20} /> Elforbrug</h2><PowerSettings /></section>
   <section class="glass pad stack rise" style="--i:3"><h2><Icon name="sliders" size={20} /> Funktioner</h2><FeatureSettings /></section>
 
+  {#if !auth.ingress}
   <section class="glass pad stack rise" style="--i:4">
     <div class="row between"><h2><Icon name="gear" size={20} /> Login til appen</h2>
       <span class="badge {auth.login_required ? 'ok' : 'warn'}">{auth.login_required ? 'Slået til' : 'Slået fra'}</span></div>
@@ -105,6 +106,7 @@
     <div class="row"><button class="btn primary" onclick={changePw} disabled={busy || !cur || neu.length < 10}>Gem</button>
       {#if auth.login_required}<button class="btn danger" onclick={logout}><Icon name="logout" size={18} /> Log ud</button>{/if}</div>
   </section>
+  {/if}
   <p class="center"><a class="small" href="#/setup">Kør opsætningsguiden igen</a></p>
   <p class="tiny muted center">FilamentHub · Tip: vælg “Føj til hjemmeskærm” i browseren for at bruge den som app.</p>
 </div>
