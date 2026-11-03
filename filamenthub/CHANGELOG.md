@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.9
+
+- Et færdigt print uden forbrugsdata i Bambu Cloud lægges under "Venter på dig", så du kan indtaste grammene, i stedet for at blive bogført som 0 g.
+- Kiosk-visningen virker også via Home Assistant-adressen.
+- Biblioteket viser altid det nyeste billede af pladen.
+- Overblik prøver at hente printets billede i op til en time, hvis Bambu Cloud er sen.
+- A finished print without usage data in Bambu Cloud now waits for you to enter the grams instead of being booked as 0 g.
+- The kiosk view also works through the Home Assistant address.
+- The library always shows the newest plate photo.
+- The dashboard keeps trying to fetch the print picture for up to an hour if Bambu Cloud is late.
+
 ## 0.1.8
 
 - Billedet af pladen prøves op til 5 gange over 5 minutter, hvis kameraet ikke svarer lige når printet slutter. Stikket slukkes først, når billedet er taget.

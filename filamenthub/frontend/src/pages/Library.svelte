@@ -14,11 +14,14 @@
     try { const r = await api(`api/library?${new URLSearchParams({ q, limit: '200' })}`); items = r.items; total = r.total; } catch (e) { items = items || []; toastErr(e); }
   }
   const search = debounce(load, 250);
-  onMount(async () => {
+  let gone = false;
+  onMount(() => {
     load();
-    try { ft = await api('api/features'); } catch { ft = {}; }
-    try { imp = await api('api/library/import'); if (imp.running) poll(); } catch { /* not available */ }
-    return () => clearTimeout(timer);
+    (async () => {
+      try { ft = await api('api/features'); } catch { ft = {}; }
+      try { imp = await api('api/library/import'); if (imp.running && !gone) poll(); } catch { /* not available */ }
+    })();
+    return () => { gone = true; clearTimeout(timer); };
   });
 
   const dur = (s) => (s ? `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')} t` : '–');
@@ -27,7 +30,7 @@
     const m = e.spools?.length ? e.spools.map((s) => ({ type: s.material, color: s.color })) : e.materials || [];
     return m.filter((x) => x.type || x.color);
   };
-  const img = (e) => (e.has_photo ? `api/library/${e.task_id}/photo.jpg?v=${ver}` : e.has_cover ? `api/library/${e.task_id}/cover.png` : '');
+  const img = (e) => (e.has_photo ? `api/library/${e.task_id}/photo.jpg?v=${Math.round(e.photo_ts || 0)}-${ver}` : e.has_cover ? `api/library/${e.task_id}/cover.png` : '');
 
   async function retake() {
     busy = true;
@@ -47,6 +50,7 @@
     clearTimeout(timer);
     timer = setTimeout(async () => {
       try { imp = await api('api/library/import'); } catch { return; }
+      if (gone) return;
       if (imp.running) poll(); else { if (imp.error) toastErr(new Error(imp.error)); await load(); }
     }, 2000);
   }
@@ -96,7 +100,7 @@
   <Sheet title={sel.title} onclose={() => (sel = null)} wide>
     <div class="stack">
       <div class="pics">
-        {#if sel.has_photo}<img src={`api/library/${sel.task_id}/photo.jpg?v=${ver}`} alt="Billede af pladen">{/if}
+        {#if sel.has_photo}<img src={`api/library/${sel.task_id}/photo.jpg?v=${Math.round(sel.photo_ts || 0)}-${ver}`} alt="Billede af pladen">{/if}
         {#if sel.has_cover}<img src={`api/library/${sel.task_id}/cover.png`} alt="Cover">{/if}
       </div>
       <dl class="kv">

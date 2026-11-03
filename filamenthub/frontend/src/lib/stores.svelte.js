@@ -26,7 +26,7 @@ export function go(path, query) {
 }
 
 // ---- auth ----
-export const auth = $state({ ready: false, authenticated: false, password_set: true, login_required: true, setup_allowed: false });
+export const auth = $state({ ready: false, authenticated: false, password_set: true, login_required: true, setup_allowed: false, ingress: false });
 export async function loadAuth() {
   try {
     const s = await api('api/auth/state');

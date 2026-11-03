@@ -1239,6 +1239,8 @@ class Engine:
             d["grams"] += grams
         if not per_slot and total > 0:
             per_slot["unknown"] = {"grams": total, "material": "", "color": ""}
+        # A finished print without any usage in Bambu Cloud: ask the user instead of silently booking 0 g.
+        no_data = not per_slot and factor is not None and factor > 0
 
         # Turn every slot into one or more portions (slot row, spool, grams, full grams, note).
         # Pass 1: runouts (any number of filaments). A spool that ran out is physically empty: it is set to 0 g, and
@@ -1392,6 +1394,10 @@ class Engine:
                 portions.append((slot, spool_id, grams, full, d, why, "pending"))
                 continue
             portions.append((slot, spool_id, grams, full, d, note, "apply"))
+
+        if no_data:
+            portions.append(("unknown", None, 0.0, 0.0, {"material": "", "color": ""},
+                             "Bambu Cloud har ingen forbrugsdata – indtast gram", "pending"))
 
         weighed = self.db.get("weighed", {}) or {}
         pending = 0

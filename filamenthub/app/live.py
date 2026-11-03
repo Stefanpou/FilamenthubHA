@@ -380,7 +380,7 @@ def empty_model() -> dict:
 class ModelCache:
     """Fetches cover + mesh of one job in a background thread and keeps them in DATA_DIR/live/<task id>/."""
 
-    BACKOFF = (20, 90, 300, 900)
+    BACKOFF = (20, 90, 300, 900, 1800, 3600)   # a cloud task can be listed late
 
     def __init__(self, root=None):
         self._root = root

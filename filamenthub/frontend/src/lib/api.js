@@ -2,7 +2,8 @@
 let onUnauthorized = () => {};
 export function setUnauthorizedHandler(fn) { onUnauthorized = fn; }
 
-export const isKiosk = () => location.pathname.replace(/\/+$/, '') === '/ha';
+// /ha, or <Ingress prefix>/ha inside Home Assistant
+export const isKiosk = () => /(^|\/)ha$/.test(location.pathname.replace(/\/+$/, ''));
 
 function withPassthrough(path) {
   const extra = new URLSearchParams(location.search);
