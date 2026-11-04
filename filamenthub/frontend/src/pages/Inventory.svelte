@@ -1,5 +1,6 @@
 <script>
   import SpoolCard from '../lib/SpoolCard.svelte';
+  import InventoryViews from '../lib/InventoryViews.svelte';
   import SpoolSheet from '../lib/SpoolSheet.svelte';
   import Spool from '../lib/ui/Spool.svelte';
   import Icon from '../lib/ui/Icon.svelte';
@@ -9,6 +10,14 @@
   let q = $state(''), material = $state(''), vendor = $state(''), location = $state(''), colorFam = $state('');
   let low = $state(route.query.low === '1'), archived = $state(false), noPrice = $state(false), unweighed = $state(false), sort = $state('name'), showFilters = $state(false);
   let open = $state(null);
+
+  // How the stock is shown; remembered per device.
+  const VIEWS = [['cards', 'Kort', 'grid'], ['list', 'Liste', 'list'], ['table', 'Tabel', 'table'], ['group', 'Grupperet', 'group'], ['wall', 'Farvevæg', 'palette']];
+  const GROUPS = [['material', 'Materiale'], ['vendor', 'Mærke'], ['location', 'Placering'], ['color', 'Farve']];
+  const stored = (k, ok, d) => { try { const v = localStorage.getItem(k); return ok.includes(v) ? v : d; } catch { return d; } };
+  let view = $state(stored('fh.inv.view', VIEWS.map((v) => v[0]), 'cards'));
+  let groupBy = $state(stored('fh.inv.group', GROUPS.map((g) => g[0]), 'material'));
+  $effect(() => { const v = view, g = groupBy; try { localStorage.setItem('fh.inv.view', v); localStorage.setItem('fh.inv.group', g); } catch { /* private mode */ } });
 
   function family(c) {
     const h = hex(c).slice(1);
@@ -113,10 +122,24 @@
       </div>
     {/if}
 
-    <div class="small muted">{shown.length} {archived ? 'arkiverede ' : ''}ruller{#if !archived} · {fmtKg(total)} filament{/if}</div>
+    <div class="row between viewbar">
+      <div class="small muted">{shown.length} {archived ? 'arkiverede ' : ''}ruller{#if !archived} · {fmtKg(total)} filament{/if}</div>
+      <div class="row" style="gap:8px">
+        {#if view === 'group'}
+          <select class="input gsel" bind:value={groupBy} aria-label="Gruppér efter">{#each GROUPS as [k, t]}<option value={k}>{t}</option>{/each}</select>
+        {/if}
+        <div class="seg" role="radiogroup" aria-label="Visning">
+          {#each VIEWS as [k, t, ic]}<button role="radio" aria-checked={view === k} class:on={view === k} title={t} aria-label={t} onclick={() => (view = k)}><Icon name={ic} size={18} /></button>{/each}
+        </div>
+      </div>
+    </div>
 
     {#if shown.length}
-      <div class="grid">{#each shown as s, i (s.id)}<SpoolCard {s} index={i} slotLabel={inSlot[s.id] || ''} onclick={() => (open = s.id)} />{/each}</div>
+      {#if view === 'cards'}
+        <div class="grid">{#each shown as s, i (s.id)}<SpoolCard {s} index={i} slotLabel={inSlot[s.id] || ''} onclick={() => (open = s.id)} />{/each}</div>
+      {:else}
+        <InventoryViews {view} spools={shown} {inSlot} {groupBy} {family} onopen={(id) => (open = id)} />
+      {/if}
     {:else}
       <div class="glass pad center stack"><p class="muted">Ingen ruller matcher.</p><button class="btn" onclick={reset}>Nulstil filtre</button></div>
     {/if}
@@ -128,6 +151,13 @@
 <style>
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 12px; }
   @media (min-width: 700px) { .grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; } }
+  .viewbar { flex-wrap: wrap; gap: 8px; }
+  .seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 12px; background: var(--panel); border: 1px solid var(--panel-border); }
+  .seg button { all: unset; cursor: pointer; display: grid; place-items: center; width: 34px; height: 30px; border-radius: 9px; color: var(--muted); transition: background .2s, color .2s; }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); }
+  .gsel { width: auto; padding: 6px 10px; font-size: 13px; height: auto; }
   .toolbar { position: sticky; top: calc(var(--safe-t) + 8px); z-index: 20; }
   .icon-btn { position: relative; flex: none; }
   .icon-btn.on { border-color: var(--accent); color: var(--accent); }

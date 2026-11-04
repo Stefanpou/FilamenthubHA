@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Lager kan vises på fem måder: kort, kompakt liste, tabel (sortér ved at trykke på kolonnen), grupperet (efter materiale, mærke, placering eller farve) og farvevæg. Valget huskes på enheden.
+- The inventory can be shown five ways: cards, compact list, table (tap a column to sort), grouped (by material, brand, location or colour) and colour wall. The choice is remembered per device.
+
 ## 0.1.9
 
 - Et færdigt print uden forbrugsdata i Bambu Cloud lægges under "Venter på dig", så du kan indtaste grammene, i stedet for at blive bogført som 0 g.
