@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Lager-visningerne er finpudset: listen viser navn og materiale på to linjer på telefonen, mørke ruller ses tydeligt på farvevæggen, og placeringen står ikke længere dobbelt i tabellen.
+- Polished inventory views: two-line list rows on phones, dark spools visible on the colour wall, no duplicated location in the table.
+
 ## 0.2.0
 
 - Lager kan vises på fem måder: kort, kompakt liste, tabel (sortér ved at trykke på kolonnen), grupperet (efter materiale, mærke, placering eller farve) og farvevæg. Valget huskes på enheden.

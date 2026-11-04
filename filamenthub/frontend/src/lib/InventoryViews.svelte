@@ -7,7 +7,10 @@
 
   const label = (s) => category(s) || s.material || '–';
   const pct = (s) => Math.round(pctOf(s) * 100);
-  const where = (s) => [inSlot[s.id], s.location].filter(Boolean).join(' · ');
+  // The sync writes the slot into the location ("X2D - A2"); only fall back to the slot label without one.
+  const where = (s) => s.location || inSlot[s.id] || '';
+  // Very dark filament would vanish on the dark page: draw its remaining-ring in grey.
+  const ringOf = (c) => { const h = hex(c).slice(1); const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); return 0.2126 * r + 0.7152 * g + 0.0722 * b < 60 ? '#a9b2c4' : hex(c); };
 
   // ---- table: own column sort on top of the page's filtered/sorted list
   let tkey = $state(''), tdir = $state(1);
@@ -59,11 +62,11 @@
     {#each spools as s (s.id)}
       <li><button onclick={() => onopen(s.id)} class:arch={s.archived}>
         <i class="dot" style="--c:{hex(s.color)}"></i>
-        <span class="mat">{label(s)}</span>
-        <span class="nm ellipsis"><span class="muted">{s.vendor}</span> {s.name}</span>
-        {#if inSlot[s.id]}<span class="slot">{inSlot[s.id]}</span>{/if}
-        <span class="g mono">{fmtG(s.remaining)}</span>
-        <span class="p mono {levelClass(pctOf(s))}">{pct(s)}%</span>
+        <span class="txt">
+          <b class="ellipsis">{s.name || label(s)}</b>
+          <span class="sub ellipsis"><span>{label(s)}</span>{#if s.vendor}<span class="muted"> · {s.vendor}</span>{/if}{#if inSlot[s.id]}<span class="slot"> · {inSlot[s.id]}</span>{/if}</span>
+        </span>
+        <span class="amt"><span class="g mono">{fmtG(s.remaining)}</span><span class="p mono {levelClass(pctOf(s))}">{pct(s)}%</span></span>
       </button></li>
     {/each}
   </ul>
@@ -103,7 +106,7 @@
   <div class="wall">
     {#each wall as s (s.id)}
       <button class="sw" onclick={() => onopen(s.id)} class:arch={s.archived} class:low={isLow(s)}
-        title="{s.vendor} {label(s)} {s.name} – {fmtG(s.remaining)} ({pct(s)} %)" style="--c:{hex(s.color)};--p:{pct(s)}">
+        title="{s.vendor} {label(s)} {s.name} – {fmtG(s.remaining)} ({pct(s)} %)" style="--c:{hex(s.color)};--rc:{ringOf(s.color)};--p:{pct(s)}">
         <span class="ring"><span class="disc"></span></span>
         <span class="wl ellipsis">{s.name || label(s)}</span>
         <span class="wm muted ellipsis">{label(s)} · {pct(s)}%</span>
@@ -123,11 +126,13 @@
   .list button { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 10px; border-radius: 10px; font-size: 14px; }
   .list button:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
   .list .dot { margin: 0; }
-  .list .mat { font-weight: 650; flex: none; max-width: 30%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .list .nm { flex: 1; min-width: 0; }
-  .list .slot { font-size: 11.5px; color: var(--accent); flex: none; }
-  .list .g { flex: none; font-weight: 650; }
-  .list .p { flex: none; width: 3.4em; text-align: right; font-size: 12.5px; }
+  .list .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .list .txt b { font-weight: 650; }
+  .list .sub { font-size: 12.5px; }
+  .list .slot { color: var(--accent); }
+  .list .amt { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+  .list .g { font-weight: 650; }
+  .list .p { font-size: 12px; }
   .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .tblwrap { overflow-x: auto; padding: 2px; touch-action: pan-x pan-y; overscroll-behavior-x: contain; }
@@ -150,7 +155,7 @@
   .wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 16px 10px; }
   .sw { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; text-align: center; }
   .ring { width: 74px; height: 74px; border-radius: 50%; display: grid; place-items: center;
-    background: conic-gradient(var(--c) calc(var(--p) * 1%), color-mix(in srgb, var(--muted) 18%, transparent) 0);
+    background: conic-gradient(var(--rc) calc(var(--p) * 1%), color-mix(in srgb, var(--muted) 22%, transparent) 0);
     transition: transform .25s var(--spring, ease), box-shadow .25s; }
   .disc { width: 58px; height: 58px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px #ffffff30, inset 0 -8px 16px #0003, 0 0 0 4px var(--bg, #0b0f17); }
   .sw:hover .ring { transform: scale(1.08); box-shadow: 0 0 22px -4px var(--c); }

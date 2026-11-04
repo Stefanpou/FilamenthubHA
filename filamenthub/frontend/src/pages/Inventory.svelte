@@ -157,7 +157,7 @@
   .seg button:hover { color: var(--text); }
   .seg button.on { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
   .seg button:focus-visible { outline: 2px solid var(--accent); }
-  .gsel { width: auto; padding: 6px 10px; font-size: 13px; height: auto; }
+  .gsel { width: auto; padding: 6px 30px 6px 10px; font-size: 13px; height: auto; }
   .toolbar { position: sticky; top: calc(var(--safe-t) + 8px); z-index: 20; }
   .icon-btn { position: relative; flex: none; }
   .icon-btn.on { border-color: var(--accent); color: var(--accent); }
