@@ -167,6 +167,7 @@ def spool_display(spool: dict) -> dict:
         "colors": [c[:6] for c in multi],
         "remaining": round(float(spool.get("remaining_weight") or 0), 1),
         "initial": float(spool.get("initial_weight") or f.get("weight") or 0),
+        "nominal": float(nominal_weight(spool) or 0),
         "used": round(float(spool.get("used_weight") or 0), 1),
         "spool_weight": spool.get("spool_weight") if spool.get("spool_weight") is not None else f.get("spool_weight"),
         "location": spool.get("location") or "",
@@ -185,11 +186,21 @@ def spool_display(spool: dict) -> dict:
     }
 
 
-def _kg_price(spool: dict) -> float | None:
-    """Price per kg: the spool's price (else the filament's) over its start weight."""
+def nominal_weight(spool: dict) -> float | None:
+    """The net weight the spool's price is for: its start weight, unless a weighing found more than that."""
     f = spool.get("filament") or {}
-    price = spool.get("price") if spool.get("price") is not None else f.get("price")
-    weight = spool.get("initial_weight") or f.get("weight")
+    return spool.get("nominal_weight") or spool.get("initial_weight") or f.get("weight")
+
+
+def _kg_price(spool: dict) -> float | None:
+    """Price per kg: the spool's price over the weight it was sold as (else the filament's price over its weight).
+
+    A fixed price per spool: an overfilled spool (more weighed than its nominal weight) does not get cheaper."""
+    f = spool.get("filament") or {}
+    if spool.get("price") is not None:
+        price, weight = spool["price"], nominal_weight(spool)
+    else:
+        price, weight = f.get("price"), f.get("weight")
     try:
         return round(float(price) / float(weight) * 1000, 2) if price is not None and weight else None
     except (TypeError, ValueError, ZeroDivisionError):

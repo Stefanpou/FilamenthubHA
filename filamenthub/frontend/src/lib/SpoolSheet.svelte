@@ -184,7 +184,7 @@
           <PriceInput bind:value={price} onenter={savePrice} label="Pris for rullen" />
           <button class="btn primary" onclick={savePrice} disabled={busy || num(price) === (s.price ?? null)}>Gem</button>
         </div>
-        {#if num(price) > 0 && s.initial > 0}<span class="tiny muted">{(num(price) / s.initial * 1000).toLocaleString('da-DK', { maximumFractionDigits: 2 })} kr/kg – bruges til at regne printenes pris ud</span>
+        {#if num(price) > 0 && (s.nominal || s.initial) > 0}<span class="tiny muted">{(num(price) / (s.nominal || s.initial) * 1000).toLocaleString('da-DK', { maximumFractionDigits: 2 })} kr/kg – bruges til at regne printenes pris ud</span>
         {:else if s.price == null && s.kg_price != null}<span class="tiny muted">Bruger filamentets pris: {s.kg_price.toLocaleString('da-DK', { maximumFractionDigits: 2 })} kr/kg</span>{/if}
       </label>
       <label class="f">Kommentar <textarea class="input" rows="2" bind:value={comment}></textarea></label>

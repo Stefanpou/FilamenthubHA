@@ -159,6 +159,9 @@ class LocalStore:
             self._conn.execute("PRAGMA synchronous=FULL")
             self._conn.execute("PRAGMA foreign_keys=ON")
             self._conn.executescript(SCHEMA)
+            if "nominal_weight" not in {r[1] for r in self._conn.execute("PRAGMA table_info(spools)")}:
+                # the weight the price was paid for, when a weighing found more on the spool (NULL = initial_weight)
+                self._conn.execute("ALTER TABLE spools ADD COLUMN nominal_weight REAL")
         # SpoolmanDB cache
         self._ext_lock = threading.Lock()
         self._ext_filaments: list[dict] = []
@@ -215,6 +218,7 @@ class LocalStore:
             "id": r["id"], "registered": r["registered"], "first_used": r["first_used"], "last_used": r["last_used"],
             "filament": fil, "price": r["price"] if r["price"] is not None else fil.get("price"),
             "remaining_weight": remaining, "initial_weight": initial, "spool_weight": spool_weight,
+            "nominal_weight": r.get("nominal_weight") or initial,
             "used_weight": used,
             "remaining_length": length_from_weight(remaining, density, diameter),
             "used_length": length_from_weight(used, density, diameter),
@@ -478,6 +482,7 @@ class LocalStore:
             if initial is None:
                 raise SpoolmanError("Startvægten er ukendt – kan ikke beregne forbrug", status=400)
             if rem > initial:   # more on the spool than its nominal weight (overfilled): it started with that much
+                d["nominal_weight"] = (cur or {}).get("nominal_weight") or initial   # the price stays for this weight
                 d["initial_weight"], initial = rem, rem
             d["used_weight"] = max(initial - rem, 0.0)
 
@@ -503,6 +508,8 @@ class LocalStore:
                 self.filament(d["filament_id"])
             elif "filament_id" in d:
                 d.pop("filament_id")
+            if "initial_weight" in d:   # a start weight typed by the user is also what the price is for
+                d["nominal_weight"] = None
             self._apply_weights(int(spool_id), fields, d)
             if "extra" in fields:
                 d["extra"] = self._merge_extra(cur["extra"], fields["extra"])
@@ -544,8 +551,8 @@ class LocalStore:
             raise SpoolmanError("Startvægten er ukendt – kan ikke beregne forbrug", status=400)
         remaining = max(gross - (sp["spool_weight"] or 0), 0.0)
         initial = max(sp["initial_weight"], remaining)   # heavier than nominal (overfilled): it started with that much
-        self._x("UPDATE spools SET used_weight=?, initial_weight=? WHERE id=?",
-                (initial - remaining, initial, int(spool_id)))
+        self._x("UPDATE spools SET used_weight=?, initial_weight=?, nominal_weight=? WHERE id=?",
+                (initial - remaining, initial, sp["nominal_weight"], int(spool_id)))
         return self.spool(spool_id)
 
     def usage_log(self, spool_id: int | None = None, limit: int = 200) -> list[dict]:

@@ -27,7 +27,7 @@ from .db import Database
 from .lookup import lookup as lookup_code
 from .printer_state import color_distance, slot_label
 from . import slicer
-from .spoolman import DRIED_FIELD, FILAMENT_FIELDS, TAG_FIELD, SpoolmanError, extra_value, spool_display
+from .spoolman import DRIED_FIELD, FILAMENT_FIELDS, TAG_FIELD, SpoolmanError, extra_value, nominal_weight, spool_display
 from .store import LocalStore
 from .sync import COLOR_MATCH, Engine, material_match
 
@@ -1073,8 +1073,8 @@ def stats():
         if not s:
             return None
         fil = s.get("filament") or {}
-        if s.get("price") and float(s.get("initial_weight") or fil.get("weight") or 0) > 0:
-            return float(s["price"]) / float(s.get("initial_weight") or fil.get("weight"))
+        if s.get("price") and float(nominal_weight(s) or 0) > 0:
+            return float(s["price"]) / float(nominal_weight(s))
         if fil.get("price") and float(fil.get("weight") or 0) > 0:
             return float(fil["price"]) / float(fil["weight"])
         return None

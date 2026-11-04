@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+
+- Prisen for en rulle er fast: kr/kg og printpriser regnes ud fra rullens nominelle vægt, også når den vejer mere end det.
+- A spool's price is fixed: price per kg and print costs use the spool's nominal weight, even when it weighs more.
+
 ## 0.2.2
 
 - En rulle, der vejer mere end sin nominelle vægt (fx 1050 g på en "1 kg"-rulle), får nu den vejede vægt i stedet for at blive skåret ned til 1000 g.
