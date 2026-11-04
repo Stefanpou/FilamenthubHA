@@ -112,7 +112,7 @@
 </div>
 
 <style>
-  h1 { font-size: 26px; }
+  h1 { font-size: 28px; }
   h2 { font-size: 17px; display: flex; align-items: center; gap: 8px; }
   .dev { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.03); border: 1px solid var(--panel-border); cursor: pointer; width: 100%; }
   .dev.sel { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); }

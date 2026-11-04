@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+
+- Finpudsning af det nye udseende: forbrugsgrafen i Historik viser søjlerne igen, rullevinduet er grafitgråt, menuen på telefonen viser hele ordet "Indstillinger", og prisberegneren følger samme stil.
+- Polish of the new look: the usage chart shows its bars again, the spool sheet is graphite, the phone menu shows full labels, and the price calculator matches the style.
+
 ## 0.3.0
 
 - Nyt, roligere udseende: grafitgrå flader uden glød og bevægelige baggrunde, ny skrift (IBM Plex), en sidebjælke med tekst på computer og en enklere menulinje på telefonen. Filamentfarverne er nu den eneste kraftige farve på skærmen.

@@ -271,7 +271,7 @@
 
 <style>
   .hero { display: flex; gap: 22px; align-items: center; padding: 14px 4px 4px; position: relative; }
-  .big { font-size: 36px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+  .big { font-size: 36px; font-weight: 500; line-height: 1; font-family: var(--font); font-variant-numeric: tabular-nums; }
   .stats { position: relative; }
   .slider { width: 100%; accent-color: var(--c); height: 28px; }
   .badge.dried { color: var(--warn); }

@@ -78,7 +78,7 @@
             {@const h = x.grams > 0 ? Math.max(3, (x.grams / maxG) * 100) : 1.5}
             <g onclick={() => (sel = i)} onkeydown={(e) => e.key === 'Enter' && (sel = i)} role="button" tabindex="0" class="bargrp" class:sel={sel === i}>
               <rect x={i * 28} y="0" width="28" height="130" fill="transparent"/>
-              <rect class="bar" x={i * 28 + 5} y={110 - h} width="18" height={h} rx="3" fill={x.grams <= 0 ? 'rgba(237,237,237,.08)' : (sel === null ? i === series.length - 1 : sel === i) ? 'var(--accent)' : '#4a4a4f'}/>
+              <rect class="col" x={i * 28 + 5} y={110 - h} width="18" height={h} rx="3" fill={x.grams <= 0 ? 'rgba(237,237,237,.08)' : (sel === null ? i === series.length - 1 : sel === i) ? 'var(--accent)' : '#4a4a4f'}/>
               <text x={i * 28 + 14} y="127" text-anchor="middle" class="lbl">{mode === 'weeks' && i % 2 ? '' : x.label}</text>
             </g>
           {/each}
@@ -193,12 +193,12 @@
   .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
   @media (min-width: 800px) { .tiles { grid-template-columns: repeat(4, 1fr); } }
   .tile { padding: 16px; display: flex; flex-direction: column; gap: 4px; }
-  .tile b { font-size: 28px; font-weight: 500; line-height: 1.1; }
+  .tile b { font-size: 28px; font-weight: 500; line-height: 1.1; font-family: var(--font); font-variant-numeric: tabular-nums; }
   .tile span { font-size: 13px; color: var(--muted); }
   .chart { width: 100%; height: auto; max-height: 220px; overflow: visible; }
   .bargrp { cursor: pointer; outline: none; }
-  .bar { transition: fill .14s; }
-  .bargrp:hover .bar { opacity: .85; }
+  .col { transition: fill .14s; }
+  .bargrp:hover .col { opacity: .85; }
   .lbl { fill: var(--muted); font-size: 9px; font-family: var(--mono); }
   .stackbar { display: flex; height: 12px; border-radius: 4px; overflow: hidden; gap: 2px; }
   .stackbar i { display: block; min-width: 3px; }

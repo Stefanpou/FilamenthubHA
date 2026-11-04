@@ -64,7 +64,7 @@
           <span class="lb">{n.cta ? 'Tilføj rulle' : n.label}</span>{#if n.path === '/history' && pending}<span class="count mono">{pending}</span>{/if}
         </a>
       {/each}
-      <span class="conn" class:off><i></i>{off ? 'Printer ikke forbundet' : 'Printer forbundet'}</span>
+      <span class="conn" class:off><i></i>{off ? 'Ingen forbindelse til Bambu Cloud' : 'Forbundet til Bambu Cloud'}</span>
     </nav>{/if}
     <main class:setup>
       {#if !app.online}<div class="alert err offline">Ingen forbindelse til FilamentHub – prøver igen …</div>{/if}
@@ -88,9 +88,9 @@
   .nav { position: fixed; z-index: 50; left: 0; right: 0; bottom: 0; height: calc(var(--nav-h) + var(--safe-b)); padding: 0 4px var(--safe-b);
     display: flex; align-items: center; justify-content: space-around; background: var(--bg-2); border: 0; border-top: 1px solid var(--panel-border); border-radius: 0; }
   .brand, .conn, .count { display: none; }
-  .item { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; font-weight: 500;
+  .item { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; font-weight: 500;
     padding: 8px 0; border-radius: 10px; transition: color .14s, transform .14s var(--ease); position: relative; }
-  .item .lb { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .lb { white-space: nowrap; }
   .item:active { transform: scale(.97); }
   .item.on { color: var(--text); }
   .item.on .ic { color: var(--accent); }

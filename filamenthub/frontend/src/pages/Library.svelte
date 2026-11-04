@@ -82,7 +82,7 @@
           <div class="im">
             {#if img(e)}<img src={img(e)} alt="" loading="lazy">
             {:else}<div class="ph">{#each mats(e) as m}<i style="background:{hex(m.color)}"></i>{/each}</div>{/if}
-            {#if e.has_photo}<span class="badge accent tag">Billede</span>{/if}
+            {#if e.has_photo}<span class="badge tag">Billede</span>{/if}
           </div>
           <div class="tx">
             <b class="ellipsis">{e.title}</b>
@@ -135,7 +135,7 @@
 {/if}
 
 <style>
-  h1 { font-size: 26px; }
+  h1 { font-size: 28px; }
   .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   @media (min-width: 640px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (min-width: 1000px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
@@ -144,7 +144,7 @@
   .im img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 6px; }
   .ph i { width: 22px; height: 22px; border-radius: 50%; }
-  .tag { position: absolute; top: 6px; left: 6px; }
+  .tag { position: absolute; top: 8px; left: 8px; background: rgba(15,15,16,.8); }
   .tx { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
   .chip { padding: 2px 8px; }

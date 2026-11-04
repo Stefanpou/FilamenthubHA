@@ -432,7 +432,7 @@
 
 <style>
   .add { max-width: 720px; margin: 0 auto; }
-  h1 { font-size: 26px; }
+  h1 { font-size: 28px; }
   .search.big .input { min-height: 56px; font-size: 17px; border-radius: 18px; padding-left: 50px; }
   .search.big .ico { left: 17px; }
   .scanbtn { min-height: 56px; border-radius: 18px; padding: 0 18px; flex: none; }

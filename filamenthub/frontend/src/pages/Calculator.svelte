@@ -167,26 +167,26 @@
 </div>
 
 <style>
-  h1 { font-size: 26px; }
-  h2 { font-size: 17px; display: flex; align-items: center; gap: 8px; }
-  .cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  h1 { font-size: 28px; font-weight: 500; }
+  h2 { font-size: 17px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
   @media (min-width: 900px) { .cols { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
   .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .fl { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 16px; border: 1px solid var(--panel-border);
+  .fl { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 10px; border: 1px solid var(--panel-border);
     border-left: 3px solid var(--c); }
   .fl .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: 4px; }
   .val { padding: 12px 0; color: var(--text); font-size: 15px; font-weight: 500; }
   .val.short { color: var(--warn); }
   .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .tile { display: flex; flex-direction: column; gap: 4px; }
-  .tile b { font-size: 19px; }
-  .tile.big b { font-size: 28px; color: var(--accent); }
-  .neg { color: var(--danger, #ff6b6b); }
+  .tile b { font-size: 20px; font-weight: 500; font-family: var(--font); font-variant-numeric: tabular-nums; }
+  .tile.big b { font-size: 32px; color: var(--accent); }
+  .neg { color: var(--danger); }
   .list { display: flex; flex-direction: column; gap: 10px; }
   .list .row > :last-child { text-align: right; }
-  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--panel-border); }
-  .seg button { border: 0; padding: 9px; border-radius: 10px; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
-  .seg button.on { background: var(--accent); color: #061018; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--panel-border); }
+  .seg button { border: 0; padding: 8px; border-radius: 8px; background: transparent; color: var(--muted); font-weight: 500; cursor: pointer; }
+  .seg button.on { background: var(--panel-hi); color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
   .dualsw { gap: 8px; font-size: 14px; align-items: center; }
   .dualsw input { width: 18px; height: 18px; accent-color: var(--accent); }
 </style>
