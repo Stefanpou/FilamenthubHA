@@ -10,6 +10,8 @@
   // The sync writes the slot into the location ("X2D - A2"); only fall back to the slot label without one.
   const where = (s) => s.location || inSlot[s.id] || '';
   // Very dark filament would vanish on the dark page: draw its remaining-ring in grey.
+  // multi-colour filament (silk tri-colour, gradients): every colour as a slice, else the one colour
+  const fill = (s) => (s.colors?.length > 1 ? `conic-gradient(${s.colors.map((c, i) => `${hex(c)} ${(i * 100) / s.colors.length}% ${((i + 1) * 100) / s.colors.length}%`).join(', ')})` : hex(s.color));
   const ringOf = (c) => { const h = hex(c).slice(1); const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); return 0.2126 * r + 0.7152 * g + 0.0722 * b < 60 ? '#a9b2c4' : hex(c); };
 
   // ---- table: own column sort on top of the page's filtered/sorted list
@@ -61,7 +63,7 @@
   <ul class="list glass">
     {#each spools as s (s.id)}
       <li><button onclick={() => onopen(s.id)} class:arch={s.archived}>
-        <i class="dot" style="--c:{hex(s.color)}"></i>
+        <i class="dot" style="--c:{fill(s)}"></i>
         <span class="txt">
           <b class="ellipsis">{s.name || label(s)}</b>
           <span class="sub ellipsis"><span>{label(s)}</span>{#if s.vendor}<span class="muted"> · {s.vendor}</span>{/if}{#if inSlot[s.id]}<span class="slot"> · {inSlot[s.id]}</span>{/if}</span>
@@ -79,7 +81,7 @@
       <tbody>
         {#each rows as s (s.id)}
           <tr onclick={() => onopen(s.id)} class:arch={s.archived}>
-            <td><i class="dot" style="--c:{hex(s.color)}"></i>{label(s)}</td>
+            <td><i class="dot" style="--c:{fill(s)}"></i>{label(s)}</td>
             <td>{s.vendor || '–'}</td>
             <td class="ellipsis nmc">{s.name || '–'}</td>
             <td class="num mono">{fmtG(s.remaining)}</td>
@@ -106,7 +108,7 @@
   <div class="wall">
     {#each wall as s (s.id)}
       <button class="sw" onclick={() => onopen(s.id)} class:arch={s.archived} class:low={isLow(s)}
-        title="{s.vendor} {label(s)} {s.name} – {fmtG(s.remaining)} ({pct(s)} %)" style="--c:{hex(s.color)};--rc:{ringOf(s.color)};--p:{pct(s)}">
+        title="{s.vendor} {label(s)} {s.name} – {fmtG(s.remaining)} ({pct(s)} %)" style="--c:{fill(s)};--rc:{ringOf(s.color)};--p:{pct(s)}">
         <span class="ring"><span class="disc"></span></span>
         <span class="wl ellipsis">{s.name || label(s)}</span>
         <span class="wm muted ellipsis">{label(s)} · {pct(s)}%</span>

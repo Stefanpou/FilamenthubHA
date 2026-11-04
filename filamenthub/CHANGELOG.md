@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3
+
+- Ruller med flere farver (fx trefarvet silke) vises med alle farverne i listen, tabellen og på farvevæggen.
+- Multi-colour spools (e.g. tri-colour silk) show all their colours in the list, table and colour wall.
+
 ## 0.3.2
 
 - Når appen har ligget i baggrunden i Home Assistant, viser den ikke længere login-siden. Den venter på, at Home Assistant forbinder igen, og fortsætter selv.
