@@ -29,6 +29,7 @@
   const kr = (n) => n.toLocaleString('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 </script>
 
+<div class="wrap">
 <div class="pi">
   {#if cur === 'dkk'}
     <input class="input mono" type="number" inputmode="decimal" min="0" step="0.01" {placeholder} bind:value
@@ -45,8 +46,10 @@
 {#if cur === 'eur' && fx && num(eur) !== null}
   <span class="tiny muted">= {kr(num(eur) * fx.rate)} kr · kurs {fx.rate.toLocaleString('da-DK', { maximumFractionDigits: 4 })}{fx.source === 'ECB' ? ` (ECB ${fx.date})` : ''}</span>
 {/if}
+</div>
 
 <style>
+  .wrap { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
   .pi { display: flex; gap: 6px; align-items: stretch; min-width: 0; flex: 1; }
   .pi .input { flex: 1; min-width: 0; }
   .cur { display: flex; border: 1px solid var(--line, rgba(255,255,255,.12)); border-radius: 10px; overflow: hidden; flex: none; }

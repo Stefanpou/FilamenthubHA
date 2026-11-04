@@ -162,6 +162,14 @@ class LocalStore:
             if "nominal_weight" not in {r[1] for r in self._conn.execute("PRAGMA table_info(spools)")}:
                 # the weight the price was paid for, when a weighing found more on the spool (NULL = initial_weight)
                 self._conn.execute("ALTER TABLE spools ADD COLUMN nominal_weight REAL")
+            if self._conn.execute("PRAGMA user_version").fetchone()[0] < 1:
+                # 0.2.2 raised the start weight of overfilled spools without keeping the weight they were sold as:
+                # those are priced per the filament's weight again.
+                self._conn.execute(
+                    "UPDATE spools SET nominal_weight=(SELECT weight FROM filaments f WHERE f.id=spools.filament_id) "
+                    "WHERE (nominal_weight IS NULL OR nominal_weight>=initial_weight) "
+                    "AND initial_weight>(SELECT weight FROM filaments f WHERE f.id=spools.filament_id)")
+                self._conn.execute("PRAGMA user_version=1")
         # SpoolmanDB cache
         self._ext_lock = threading.Lock()
         self._ext_filaments: list[dict] = []
@@ -550,9 +558,12 @@ class LocalStore:
         if sp["initial_weight"] is None:
             raise SpoolmanError("Startvægten er ukendt – kan ikke beregne forbrug", status=400)
         remaining = max(gross - (sp["spool_weight"] or 0), 0.0)
-        initial = max(sp["initial_weight"], remaining)   # heavier than nominal (overfilled): it started with that much
+        nominal = self._raw_spool(spool_id)["nominal_weight"]
+        if remaining > sp["initial_weight"]:   # heavier than nominal (overfilled): it started with that much
+            nominal = nominal or sp["initial_weight"]   # the price stays for the weight it was sold as
+        initial = max(sp["initial_weight"], remaining)
         self._x("UPDATE spools SET used_weight=?, initial_weight=?, nominal_weight=? WHERE id=?",
-                (initial - remaining, initial, sp["nominal_weight"], int(spool_id)))
+                (initial - remaining, initial, nominal, int(spool_id)))
         return self.spool(spool_id)
 
     def usage_log(self, spool_id: int | None = None, limit: int = 200) -> list[dict]:

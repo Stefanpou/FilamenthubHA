@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4
+
+- Ruller, der blev vejet over deres nominelle vægt i 0.2.2, regner igen kr/kg ud fra filamentets vægt (fx 15 € for 1 kg = 112 kr/kg). Omregningen fra euro står nu under prisfeltet.
+- Spools weighed above their nominal weight in 0.2.2 are priced per the filament's weight again. The euro conversion now shows below the price field.
+
 ## 0.2.3
 
 - Prisen for en rulle er fast: kr/kg og printpriser regnes ud fra rullens nominelle vægt, også når den vejer mere end det.
