@@ -127,18 +127,18 @@
   .list button:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
   .list .dot { margin: 0; }
   .list .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-  .list .txt b { font-weight: 650; }
+  .list .txt b { font-weight: 500; }
   .list .sub { font-size: 12.5px; }
   .list .slot { color: var(--accent); }
   .list .amt { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
-  .list .g { font-weight: 650; }
+  .list .g { font-weight: 500; }
   .list .p { font-size: 12px; }
   .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .tblwrap { overflow-x: auto; padding: 2px; touch-action: pan-x pan-y; overscroll-behavior-x: contain; }
   table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
   th { position: sticky; top: 0; text-align: left; font-weight: 600; white-space: nowrap; }
-  th button { all: unset; cursor: pointer; padding: 10px 10px; display: inline-flex; gap: 4px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  th button { all: unset; cursor: pointer; padding: 10px 10px; display: inline-flex; gap: 4px; color: var(--muted); font-size: 13px; font-weight: 500; }
   th button.on { color: var(--accent); }
   .arr { font-size: 9px; }
   td { padding: 9px 10px; border-top: 1px solid var(--panel-border); white-space: nowrap; }
@@ -156,9 +156,9 @@
   .sw { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; text-align: center; }
   .ring { width: 74px; height: 74px; border-radius: 50%; display: grid; place-items: center;
     background: conic-gradient(var(--rc) calc(var(--p) * 1%), color-mix(in srgb, var(--muted) 22%, transparent) 0);
-    transition: transform .25s var(--spring, ease), box-shadow .25s; }
-  .disc { width: 58px; height: 58px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px #ffffff30, inset 0 -8px 16px #0003, 0 0 0 4px var(--bg, #0b0f17); }
-  .sw:hover .ring { transform: scale(1.08); box-shadow: 0 0 22px -4px var(--c); }
+    transition: box-shadow .14s; }
+  .disc { width: 58px; height: 58px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px #ffffff30, inset 0 -8px 16px #0003, 0 0 0 4px var(--bg); }
+  .sw:hover .ring { box-shadow: 0 0 0 1px rgba(237,237,237,.3); }
   .sw.low .ring { outline: 2px dashed var(--warn); outline-offset: 3px; }
   .wl { font-size: 12.5px; font-weight: 600; max-width: 100%; }
   .wm { font-size: 11px; max-width: 100%; }

@@ -440,30 +440,28 @@
   .colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
   .col { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid transparent; cursor: pointer; text-align: left; font-size: 13.5px; font-weight: 500;
     transition: all .2s var(--ease); }
-  .col:hover { background: rgba(255,255,255,.1); border-color: var(--panel-border-hi); transform: translateY(-1px); }
+  .col:hover { background: var(--panel-hi); border-color: var(--panel-border-hi); }
   .col:active { transform: scale(.96); }
-  .dot { width: 22px; height: 22px; border-radius: 50%; flex: none; border: 1.5px solid rgba(255,255,255,.3); box-shadow: 0 0 10px -2px currentColor, inset 0 -3px 6px rgba(0,0,0,.25); }
+  .dot { width: 22px; height: 22px; border-radius: 50%; flex: none; border: 1.5px solid rgba(255,255,255,.3); box-shadow: inset 0 -3px 6px rgba(0,0,0,.25); }
   .nm { min-width: 0; }
   .mine { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
   .minecard { display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; text-align: left; cursor: pointer; transition: transform .2s var(--ease), border-color .2s; }
-  .minecard:hover { transform: translateY(-2px); border-color: var(--panel-border-hi); }
+  .minecard:hover { border-color: var(--panel-border-hi); }
   .minecard .t { display: flex; flex-direction: column; min-width: 0; }
   .hint { display: flex; gap: 14px; align-items: flex-start; color: var(--accent); }
   .hint b { color: var(--text); }
   .back { align-self: flex-start; margin-left: -10px; }
-  .hero { display: flex; gap: 18px; align-items: center; padding: 18px; position: relative; overflow: hidden; }
-  .hero::before { content: ""; position: absolute; left: -30px; top: -40px; width: 260px; height: 260px; background: radial-gradient(circle, color-mix(in srgb, var(--c) 32%, transparent), transparent 70%); pointer-events: none; }
-  .hero h2 { font-size: 22px; }
-  .stepper { display: flex; align-items: center; justify-content: space-between; background: rgba(8,11,19,.6); border: 1px solid var(--panel-border-hi); border-radius: 13px; padding: 3px; min-height: 46px; }
-  .stepper b { font-size: 18px; }
+  .hero { display: flex; gap: 20px; align-items: center; padding: 20px; position: relative; overflow: hidden; }
+  .hero h2 { font-size: 22px; font-weight: 500; }
+  .stepper { display: flex; align-items: center; justify-content: space-between; background: var(--bg-2); border: 1px solid var(--panel-border-hi); border-radius: 10px; padding: 2px; min-height: 44px; }
+  .stepper b { font-size: 17px; font-weight: 500; }
   .stepper .btn { width: 40px; height: 38px; min-height: 0; font-size: 20px; }
   .colorin { width: 60px; flex: none; }
-  summary { cursor: pointer; font-weight: 600; }
-  .save { position: sticky; bottom: calc(var(--nav-h) + var(--safe-b) + 40px); z-index: 10; }   /* clear of the round + that sticks up from the nav */
+  summary { cursor: pointer; font-weight: 500; }
+  .save { position: sticky; bottom: calc(var(--nav-h) + var(--safe-b) + 16px); z-index: 10; }
   .tot { opacity: .75; font-weight: 500; }
   .burst { display: flex; justify-content: center; }
-  .burst span { margin: 0 -18px; animation: drop .8s var(--spring) both; animation-delay: calc(var(--k) * 120ms); }
-  @keyframes drop { from { opacity: 0; transform: translateY(-60px) scale(.6) rotate(-30deg); } to { opacity: 1; transform: none; } }
+  .burst span { margin: 0 -18px; animation: rise .4s var(--ease) both; animation-delay: calc(min(var(--k), 6) * 50ms); }
   @media (min-width: 900px) { .save { bottom: 20px; } .scanbtn .lbl { display: inline; } }
   @media (max-width: 480px) { .scanbtn .lbl { display: none; } }
   .tarehint { margin: -6px 0 0; }

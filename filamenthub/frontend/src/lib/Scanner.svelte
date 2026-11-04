@@ -130,11 +130,11 @@
   .cam { position: relative; border-radius: 18px; overflow: hidden; background: #000; aspect-ratio: 4/3; }
   video { width: 100%; height: 100%; object-fit: cover; }
   .frame { position: absolute; inset: 14% 10%; }
-  .frame i { position: absolute; width: 26px; height: 26px; border: 3px solid var(--accent); filter: drop-shadow(0 0 6px var(--accent)); }
+  .frame i { position: absolute; width: 26px; height: 26px; border: 3px solid var(--accent); }
   .frame i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0; }
   .frame i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-radius: 0 10px 0 0; }
   .frame i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-radius: 0 0 0 10px; }
   .frame i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-radius: 0 0 10px 0; }
-  .laser { position: absolute; left: 4%; right: 4%; height: 2px; background: var(--accent); box-shadow: 0 0 14px 2px var(--accent); animation: scan 2.2s ease-in-out infinite alternate; }
+  .laser { position: absolute; left: 4%; right: 4%; height: 2px; background: var(--accent); opacity: .8; animation: scan 2.2s ease-in-out infinite alternate; }
   @keyframes scan { from { top: 8%; } to { top: 92%; } }
 </style>

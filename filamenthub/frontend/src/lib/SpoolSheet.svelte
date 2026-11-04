@@ -271,10 +271,9 @@
 
 <style>
   .hero { display: flex; gap: 22px; align-items: center; padding: 14px 4px 4px; position: relative; }
-  .hero::before { content: ""; position: absolute; left: -20px; top: -30px; width: 240px; height: 240px; background: radial-gradient(circle, color-mix(in srgb, var(--c) 30%, transparent), transparent 70%); pointer-events: none; }
-  .big { font-size: 38px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
+  .big { font-size: 36px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
   .stats { position: relative; }
   .slider { width: 100%; accent-color: var(--c); height: 28px; }
-  .badge.dried { color: #ffc27a; background: color-mix(in srgb, #ff9f43 16%, transparent); border-color: color-mix(in srgb, #ff9f43 40%, transparent); }
+  .badge.dried { color: var(--warn); }
   .linkbtn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; }
 </style>

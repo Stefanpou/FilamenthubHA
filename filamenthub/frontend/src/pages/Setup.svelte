@@ -120,7 +120,7 @@
   .dots { display: flex; justify-content: center; gap: 8px; padding-top: 6px; }
   .dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.14); transition: all .3s var(--ease); }
   .dot.done { background: color-mix(in srgb, var(--accent) 55%, transparent); }
-  .dot.on { background: var(--accent); width: 26px; border-radius: 99px; box-shadow: 0 0 10px var(--accent); }
+  .dot.on { background: var(--accent); width: 24px; border-radius: 4px; }
   .list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; color: var(--text-dim); }
   .list li { display: flex; gap: 10px; align-items: flex-start; }
   .list li :global(svg) { flex: none; color: var(--accent); margin-top: 1px; }

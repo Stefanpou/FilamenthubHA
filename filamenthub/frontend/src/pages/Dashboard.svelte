@@ -121,19 +121,19 @@
 
 <style>
   .head { margin-bottom: 10px; align-items: baseline; }
-  .power { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 26px; padding: 14px 18px; }
+  .power { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 32px; padding: 16px 20px; }
   .power > div { display: flex; flex-direction: column; }
-  .power b { font-size: 16px; }
-  .pi { color: #ffd166; display: grid; }
+  .power b { font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .pi { color: var(--warn); display: grid; }
   .pi.off { color: var(--muted); }
   .plug { padding: 12px 16px; }
-  .last { display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; text-align: left; cursor: pointer; color: inherit; font: inherit; width: 100%; }
-  .last img { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; flex: none; }
+  .last { display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 12px; text-align: left; cursor: pointer; color: inherit; font: inherit; width: 100%; }
+  .last img { width: 64px; height: 64px; border-radius: 6px; object-fit: cover; flex: none; }
   .lt { display: flex; flex-direction: column; min-width: 0; }
-  h2 { font-size: 18px; }
+  h2 { font-size: 17px; font-weight: 500; }
   .two { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
   @media (min-width: 900px) { .two { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .list { padding: 4px 16px; }
-  .line { padding: 11px 0; border-bottom: 1px solid var(--panel-border); }
+  .line { padding: 12px 0; border-bottom: 1px solid var(--panel-border); }
   .line:last-child { border: 0; }
 </style>

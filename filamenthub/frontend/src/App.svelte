@@ -43,9 +43,10 @@
   const setup = $derived(route.path === '/setup');
   const active = (p) => (p === '/' ? route.path === '/' : route.path.startsWith(p));
   const pending = $derived(app.status?.pending || 0);
+  const off = $derived(!app.online || (app.status && app.status.bambu?.mqtt !== 'connected'));
 </script>
 
-<div class="backdrop"><div class="grid"></div><div class="noise"></div></div>
+<div class="backdrop"></div>
 
 {#if kiosk}
   <Kiosk />
@@ -56,14 +57,14 @@
 {:else}
   <div class="shell">
     {#if !setup}<nav class="nav glass" aria-label="Hovedmenu">
-      <a class="brand" href="#/" aria-label="FilamentHub"><img src="static/icon.svg?v=2" alt="" width="34" height="34"></a>
+      <a class="brand" href="#/" aria-label="FilamentHub"><img src="static/icon.svg?v=2" alt="" width="24" height="24"><span>FilamentHub</span></a>
       {#each NAV as n}
         <a href={'#' + n.path} class="item" class:on={active(n.path)} class:cta={n.cta} aria-current={active(n.path) ? 'page' : undefined}>
-          <span class="ic"><Icon name={n.icon} size={n.cta ? 26 : 22} />{#if n.path === '/history' && pending}<i class="dot">{pending}</i>{/if}</span>
-          <span class="lb">{n.label}</span>
+          <span class="ic"><Icon name={n.icon} size={n.cta ? 22 : 20} />{#if n.path === '/history' && pending}<i class="dot">{pending}</i>{/if}</span>
+          <span class="lb">{n.cta ? 'Tilføj rulle' : n.label}</span>{#if n.path === '/history' && pending}<span class="count mono">{pending}</span>{/if}
         </a>
       {/each}
-      <span class="conn" class:off={!app.online || (app.status && app.status.bambu?.mqtt !== 'connected')} title={app.online ? 'Printer-forbindelse' : 'Ingen forbindelse'}></span>
+      <span class="conn" class:off><i></i>{off ? 'Printer ikke forbundet' : 'Printer forbundet'}</span>
     </nav>{/if}
     <main class:setup>
       {#if !app.online}<div class="alert err offline">Ingen forbindelse til FilamentHub – prøver igen …</div>{/if}
@@ -76,38 +77,51 @@
 <style>
   .boot { min-height: 100dvh; display: grid; place-items: center; }
   .shell { min-height: 100dvh; }
-  main { padding: calc(var(--safe-t) + 16px) 16px calc(var(--nav-h) + var(--safe-b) + 28px); max-width: 1180px; margin: 0 auto; }
+  main { padding: calc(var(--safe-t) + 16px) 16px calc(var(--nav-h) + var(--safe-b) + 24px); max-width: 1480px; margin: 0 auto; }
   /* "backwards", not "both": a kept transform makes .view the containing block of the fixed sheets/scrims inside it. */
-  .view { animation: rise .5s var(--ease) backwards; }
-  main.setup { padding-bottom: 28px; }
+  .view { animation: rise .4s var(--ease) backwards; }
+  main.setup { padding-bottom: 24px; }
   @media (min-width: 900px) { main.setup { padding-left: 32px; } }
   .offline { margin-bottom: 12px; }
-  .nav { position: fixed; z-index: 50; left: 10px; right: 10px; bottom: calc(var(--safe-b) + 10px); height: var(--nav-h); display: flex; align-items: center; justify-content: space-around;
-    border-radius: 22px; background: rgba(14, 19, 31, .78); padding: 0 6px; }
-  .brand, .conn { display: none; }
-  .item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--muted); font-size: 10.5px; font-weight: 600; padding: 8px 0; border-radius: 16px; transition: color .25s, transform .25s var(--ease); position: relative; }
-  .item:active { transform: scale(.9); }
-  .item.on { color: var(--accent); }
-  .item.on .ic { filter: drop-shadow(0 0 8px var(--accent)); }
-  .ic { position: relative; display: grid; place-items: center; }
-  .dot { position: absolute; top: -6px; right: -10px; background: var(--warn); color: #1a1000; font-size: 10px; font-weight: 800; font-style: normal; min-width: 17px; height: 17px; border-radius: 99px; display: grid; place-items: center; padding: 0 4px; }
-  .item.cta .ic { width: 52px; height: 52px; margin-top: -26px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #6ee7ff); color: var(--accent-ink);
-    box-shadow: 0 10px 30px -6px var(--accent), 0 0 0 5px rgba(7, 9, 15, .85); transition: transform .3s var(--spring); }
-  .item.cta.on .ic, .item.cta:hover .ic { transform: scale(1.08) rotate(90deg); filter: none; }
-  .item.cta { color: var(--text-dim); }
-  .item.cta .lb { margin-top: 5px; }   /* clear the 5px ring of the round + button */
 
+  /* phone: bottom bar */
+  .nav { position: fixed; z-index: 50; left: 0; right: 0; bottom: 0; height: calc(var(--nav-h) + var(--safe-b)); padding: 0 4px var(--safe-b);
+    display: flex; align-items: center; justify-content: space-around; background: var(--bg-2); border: 0; border-top: 1px solid var(--panel-border); border-radius: 0; }
+  .brand, .conn, .count { display: none; }
+  .item { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; font-weight: 500;
+    padding: 8px 0; border-radius: 10px; transition: color .14s, transform .14s var(--ease); position: relative; }
+  .item .lb { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item:active { transform: scale(.97); }
+  .item.on { color: var(--text); }
+  .item.on .ic { color: var(--accent); }
+  .ic { position: relative; display: grid; place-items: center; }
+  .dot { position: absolute; top: -4px; right: -8px; background: var(--warn); color: #1d1404; font-size: 10px; font-weight: 600; font-style: normal;
+    min-width: 16px; height: 16px; border-radius: 8px; display: grid; place-items: center; padding: 0 4px; }
+  .item.cta .ic { width: 40px; height: 32px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+  .item.cta .lb { display: none; }
+  .item.cta { justify-content: center; }
+
+  /* desktop: sidebar */
   @media (min-width: 900px) {
-    main { padding: 28px 32px 48px calc(var(--rail-w) + 32px); }
-    .nav { left: 12px; top: 12px; bottom: 12px; right: auto; width: var(--rail-w); height: auto; flex-direction: column; justify-content: flex-start; gap: 6px; padding: 14px 8px; border-radius: 24px; }
-    .brand { display: block; margin-bottom: 14px; }
-    .item { flex: none; width: 100%; font-size: 11px; padding: 10px 0; }
-    .item:hover { color: var(--text); background: rgba(255,255,255,.05); }
-    .item.on { background: color-mix(in srgb, var(--accent) 10%, transparent); }
-    .item.cta { margin: 10px 0; }
-    .item.cta .ic { margin-top: 0; width: 46px; height: 46px; box-shadow: 0 8px 24px -6px var(--accent); }
-    .item.cta .lb { margin-top: -2px; }
-    .conn { display: block; margin-top: auto; width: 9px; height: 9px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); }
-    .conn.off { background: var(--warn); box-shadow: 0 0 10px var(--warn); }
+    main { padding: 32px 32px 48px calc(var(--rail-w) + 32px); }
+    .nav { left: 0; top: 0; bottom: 0; right: auto; width: var(--rail-w); height: auto; padding: 16px 12px; flex-direction: column; align-items: stretch;
+      justify-content: flex-start; gap: 2px; border-top: 0; border-right: 1px solid var(--panel-border); }
+    .brand { display: flex; align-items: center; gap: 8px; padding: 4px 8px 24px; color: var(--text); font-size: 16px; font-weight: 600; }
+    .item { flex: none; flex-direction: row; gap: 12px; height: 36px; padding: 0 8px; font-size: 14px; color: var(--text-dim); }
+    .item .ic { width: 20px; color: var(--muted); }
+    .item:hover { color: var(--text); background: rgba(237,237,237,.04); }
+    .item.on { color: var(--text); background: var(--panel-hi); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+    .item.on .ic { color: var(--accent); }
+    .item .dot { display: none; }
+    .count { display: inline; margin-left: auto; font-size: 12px; color: var(--warn); }
+    .item.cta { order: -1; margin: 0 0 16px; height: 40px; justify-content: flex-start; background: var(--accent); color: var(--accent-ink); font-weight: 500;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+    .item.cta:hover { background: #52dbbe; color: var(--accent-ink); }
+    .item.cta .ic { width: 20px; height: auto; background: none; box-shadow: none; color: var(--accent-ink); }
+    .item.cta .lb { display: inline; }
+    .brand { order: -2; }
+    .conn { display: flex; align-items: center; gap: 8px; margin-top: auto; padding: 8px; font-size: 12px; color: var(--muted); }
+    .conn i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+    .conn.off i { background: var(--warn); }
   }
 </style>

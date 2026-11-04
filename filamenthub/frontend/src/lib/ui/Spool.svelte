@@ -62,14 +62,13 @@
     {#if ring}
       <circle cx="50" cy="50" r="47.5" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="2.6"/>
       <circle cx="50" cy="50" r="47.5" fill="none" stroke={ringColor} stroke-width="2.8" stroke-linecap="round"
-        stroke-dasharray="{CIRC * p} {CIRC}" transform="rotate(-90 50 50)" style="transition: stroke-dasharray .9s cubic-bezier(.22,1,.36,1); filter: drop-shadow(0 0 2.5px {ringColor})"/>
+        stroke-dasharray="{CIRC * p} {CIRC}" transform="rotate(-90 50 50)" style="transition: stroke-dasharray .9s cubic-bezier(.22,1,.36,1)"/>
     {/if}
   </svg>
 </div>
 
 <style>
   .spool { position: relative; display: inline-block; flex: none; transition: transform .5s var(--ease); }
-  .spool svg { display: block; overflow: visible; filter: drop-shadow(0 calc(var(--glow) * 10px) calc(var(--glow) * 16px) color-mix(in srgb, var(--c) 38%, transparent)); }
+  .spool svg { display: block; overflow: visible; filter: drop-shadow(0 calc(var(--glow) * 8px) calc(var(--glow) * 12px) rgba(0,0,0,.45)); }
   .tilt { transform: perspective(500px) rotateY(-14deg) rotateX(6deg); }
-  :global(.spool-host:hover) .tilt, .tilt:hover { transform: perspective(500px) rotateY(0deg) rotateX(0deg) scale(1.05); }
 </style>

@@ -28,6 +28,6 @@
   .item { padding: 8px 14px 8px 10px; text-align: left; cursor: pointer; width: 100%; }
   .item:disabled { cursor: default; }
   .txt { display: flex; flex-direction: column; min-width: 0; }
-  .g { color: var(--warn); font-weight: 700; }
+  .g { color: var(--warn); font-weight: 500; }
   .g.crit { color: var(--danger); }
 </style>

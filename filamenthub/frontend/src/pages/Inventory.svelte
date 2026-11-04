@@ -82,10 +82,10 @@
     <div class="grid">{#each Array(6) as _}<div class="skeleton" style="height:250px"></div>{/each}</div>
   {:else if all.length === 0}
     <div class="empty glass rise">
-      <div class="art"><span class="a"><Spool color="#38e8c6" pct={0.8} size={110} tilt /></span><span class="b"><Spool color="#ff6a3d" pct={0.55} size={140} tilt /></span><span class="c"><Spool color="#7c5cff" pct={0.95} size={110} tilt /></span></div>
-      <h1>Dit lager er tomt</h1>
+      <div class="art"><span class="a"><Spool color="#3fd0b2" pct={0.8} size={110} tilt /></span><span class="b"><Spool color="#ff6a3d" pct={0.55} size={140} tilt /></span><span class="c"><Spool color="#e0a54a" pct={0.95} size={110} tilt /></span></div>
+      <h1>Ingen ruller på lager</h1>
       <p class="dim">Tilføj din første rulle på få sekunder – søg i databasen, scan stregkoden eller opret selv.</p>
-      <button class="btn primary big" onclick={() => go('/add')}><Icon name="plus" size={22} /> Tilføj din første rulle</button>
+      <button class="btn primary big" onclick={() => go('/add')}><Icon name="plus" size={18} /> Tilføj første rulle</button>
     </div>
   {:else}
     <div class="row toolbar">
@@ -152,29 +152,28 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 12px; }
   @media (min-width: 700px) { .grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; } }
   .viewbar { flex-wrap: wrap; gap: 8px; }
-  .seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 12px; background: var(--panel); border: 1px solid var(--panel-border); }
-  .seg button { all: unset; cursor: pointer; display: grid; place-items: center; width: 34px; height: 30px; border-radius: 9px; color: var(--muted); transition: background .2s, color .2s; }
+  .seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 10px; background: var(--panel); border: 1px solid var(--panel-border); }
+  .seg button { all: unset; cursor: pointer; display: grid; place-items: center; width: 32px; height: 28px; border-radius: 8px; color: var(--muted); transition: background-color .14s, color .14s; }
   .seg button:hover { color: var(--text); }
-  .seg button.on { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+  .seg button.on { background: var(--panel-hi); color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
   .seg button:focus-visible { outline: 2px solid var(--accent); }
-  .gsel { width: auto; padding: 6px 30px 6px 10px; font-size: 13px; height: auto; }
+  .gsel { width: auto; padding: 4px 32px 4px 12px; font-size: 13px; min-height: 32px; height: auto; }
   .toolbar { position: sticky; top: calc(var(--safe-t) + 8px); z-index: 20; }
   .icon-btn { position: relative; flex: none; }
-  .icon-btn.on { border-color: var(--accent); color: var(--accent); }
-  .cnt { position: absolute; top: -5px; right: -5px; background: var(--accent); color: var(--accent-ink); font-size: 10px; font-weight: 800; border-radius: 99px; min-width: 17px; height: 17px; display: grid; place-items: center; font-style: normal; }
+  .icon-btn.on { border-color: rgba(237,237,237,.22); color: var(--text); }
+  .cnt { position: absolute; top: -6px; right: -6px; background: var(--accent); color: var(--accent-ink); font-size: 10px; font-weight: 600; border-radius: 8px; min-width: 16px; height: 16px; display: grid; place-items: center; font-style: normal; }
   .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; margin: 0 -16px; padding: 0 16px 4px; }
   .chips::-webkit-scrollbar { display: none; }
-  .chip.sub { font-size: 12.5px; opacity: .85; }
-  .sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); background: var(--c); cursor: pointer; transition: transform .2s var(--spring), box-shadow .2s; }
-  .sw:hover { transform: scale(1.12); }
-  .sw.on { border-color: #fff; box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 50%, transparent), 0 0 16px var(--c); transform: scale(1.15); }
-  .empty { text-align: center; padding: 48px 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 4vh; overflow: hidden; }
+  .chip.sub { font-size: 13px; color: var(--muted); }
+  .sw { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(237,237,237,.16); background: var(--c); cursor: pointer; transition: border-color .14s, box-shadow .14s; }
+  .sw:hover { border-color: rgba(237,237,237,.4); }
+  .sw.on { border-color: var(--bg); box-shadow: 0 0 0 2px var(--text); }
+  .empty { text-align: center; padding: 48px 24px; display: flex; flex-direction: column; align-items: center; gap: 16px; margin-top: 4vh; overflow: hidden; }
   .empty h1 { font-size: 28px; }
   .empty p { max-width: 380px; }
   .art { position: relative; height: 150px; width: 300px; max-width: 100%; margin-bottom: 8px; }
-  .art span { position: absolute; animation: float 6s ease-in-out infinite; }
-  .art .a { left: 0; top: 30px; animation-delay: -1s; }
+  .art span { position: absolute; }
+  .art .a { left: 0; top: 30px; }
   .art .b { left: 80px; top: 0; z-index: 2; }
-  .art .c { right: 0; top: 36px; animation-delay: -3s; }
-  @keyframes float { 50% { transform: translateY(-8px); } }
+  .art .c { right: 0; top: 36px; }
 </style>

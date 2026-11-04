@@ -382,7 +382,7 @@
     transition: bottom 1.2s var(--ease, ease); animation: pulse 1.6s ease-in-out infinite; }
   .stand.still .edge { animation: none; }
   .stand .lbl { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; color: var(--text, #e8ecf4); text-shadow: 0 1px 6px #000; }
-  .stand .lbl b { font-size: clamp(16px, 4.2cqi, 30px); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .stand .lbl b { font-size: clamp(16px, 4.2cqi, 30px); font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1; }
   .stand .lbl small { font-size: .55em; opacity: .7; margin-left: 1px; }
   .stand .lbl span { font-size: clamp(10px, 1.8cqi, 13px); color: var(--muted, #9aa3b5); white-space: nowrap; }
   .stand.compact .lbl span { display: none; }

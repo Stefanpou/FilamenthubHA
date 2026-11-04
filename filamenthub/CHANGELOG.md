@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- Nyt, roligere udseende: grafitgrå flader uden glød og bevægelige baggrunde, ny skrift (IBM Plex), en sidebjælke med tekst på computer og en enklere menulinje på telefonen. Filamentfarverne er nu den eneste kraftige farve på skærmen.
+- New calmer look: graphite surfaces without glows or moving backdrops, a new typeface (IBM Plex), a labelled sidebar on desktop and a simpler bottom bar on phones. The filament colours are now the only strong colour on screen.
+
 ## 0.2.4
 
 - Ruller, der blev vejet over deres nominelle vægt i 0.2.2, regner igen kr/kg ud fra filamentets vægt (fx 15 € for 1 kg = 112 kr/kg). Omregningen fra euro står nu under prisfeltet.

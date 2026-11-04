@@ -23,7 +23,7 @@
 </div>
 
 <style>
-  .scrim { position: fixed; inset: 0; z-index: 100; background: rgba(3, 5, 10, .66); backdrop-filter: blur(6px); display: flex; align-items: flex-end; justify-content: center; animation: fade .25s both; }
+  .scrim { position: fixed; inset: 0; z-index: 100; background: rgba(8, 8, 9, .72); display: flex; align-items: flex-end; justify-content: center; animation: fade .25s both; }
   .sheet { width: 100%; max-width: 560px; max-height: 92dvh; display: flex; flex-direction: column; border-radius: 26px 26px 0 0; background: rgba(16, 21, 34, .92);
     animation: up .4s var(--ease) both; padding-bottom: var(--safe-b); border-bottom: 0; }
   .sheet.wide { max-width: 720px; }
@@ -32,7 +32,7 @@
   h2 { font-size: 19px; }
   .body { overflow-y: auto; padding: 8px 20px 20px; flex: 1; overscroll-behavior: contain; }
   .foot { padding: 12px 20px 16px; border-top: 1px solid var(--panel-border); display: flex; gap: 10px; }
-  @keyframes up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes up { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
   @media (min-width: 720px) {
     .scrim { align-items: center; }
     .sheet { border-radius: 26px; border-bottom: 1px solid var(--panel-border); max-height: 86dvh; }

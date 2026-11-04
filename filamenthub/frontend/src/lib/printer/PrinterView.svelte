@@ -158,46 +158,44 @@
   .ring b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 17px; font-variant-numeric: tabular-nums; }
   .ring small { font-size: 10px; opacity: .7; margin-left: 1px; align-self: end; position: relative; top: -17px; left: 10px; display: none; }
   .title { min-width: 0; flex: 1; }
-  .title h3 { font-size: 17px; margin: 2px 0; }
-  .pill { display: inline-block; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--tone);
-    background: color-mix(in srgb, var(--tone) 14%, transparent); border: 1px solid color-mix(in srgb, var(--tone) 38%, transparent);
-    padding: 1px 9px; border-radius: 99px; }
+  .title h3 { font-size: 17px; font-weight: 500; margin: 4px 0; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--text-dim); }
+  .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--tone); }
   .sub { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; }
-  .stage-now { display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600; color: var(--tone); margin: 2px 0 3px; }
+  .stage-now { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; color: var(--tone); margin: 2px 0 3px; }
   .spin { width: 11px; height: 11px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--tone) 30%, transparent);
     border-top-color: var(--tone); animation: spin 0.9s linear infinite; }
   .spin.paused { animation: none; border-color: var(--tone); }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .steps { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; }
-  .steps li { display: flex; align-items: center; gap: 7px; color: var(--muted); }
+  .steps { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  .steps li { display: flex; align-items: center; gap: 8px; color: var(--muted); }
   .steps li i { width: 8px; height: 8px; flex: none; border-radius: 50%; border: 1.5px solid var(--panel-border); }
   .steps li.done { opacity: .65; }
   .steps li.done i { background: var(--ok); border-color: var(--ok); }
-  .steps li.current { color: var(--text, inherit); font-weight: 600; }
-  .steps li.current i { background: var(--tone); border-color: var(--tone); box-shadow: 0 0 8px var(--tone); animation: blink 1.2s ease-in-out infinite; }
-  @keyframes blink { 50% { opacity: .35; } }
-  @media (prefers-reduced-motion: reduce) { .spin, .steps li.current i { animation: none; } }
+  .steps li.current { color: var(--text, inherit); font-weight: 500; }
+  .steps li.current i { background: var(--tone); border-color: var(--tone); }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
   .mini { display: flex; gap: 10px; font-size: 13px; color: var(--text-dim, var(--muted)); }
   .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  .frame { position: relative; padding: 6px 6px 2px; border-radius: var(--radius); overflow: hidden;
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--tone) 18%, transparent), 0 18px 50px -20px color-mix(in srgb, var(--tone) 40%, transparent); }
+  .frame { position: relative; padding: 8px 8px 4px; border-radius: var(--radius); overflow: hidden; background: var(--bg-2); border: 1px solid var(--panel-border); }
   .banner { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 13px; }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
-  .card { background: var(--panel); border: 1px solid var(--panel-border); border-radius: var(--radius-sm, 12px); padding: 9px 12px; display: flex; flex-direction: column; gap: 2px; }
-  .card.hot { border-color: color-mix(in srgb, var(--warn) 55%, transparent); box-shadow: 0 0 18px -6px var(--warn); }
-  .k { font-size: 11.5px; color: var(--muted); }
-  .card b { font-size: 17px; font-weight: 650; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 8px; }
+  .card { background: var(--panel); border: 1px solid var(--panel-border); border-radius: var(--radius-sm, 10px); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .card.hot { border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+  .card.hot b { color: var(--warn); }
+  .k { font-size: 12px; color: var(--muted); }
+  .card b { font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
   .card small { font-size: 12px; color: var(--muted); font-weight: 500; }
 
   .slots { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-  .slots li { display: flex; align-items: center; gap: 7px; padding: 5px 11px 5px 8px; border-radius: 99px; font-size: 13px;
+  .slots li { display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 8px; border-radius: 8px; font-size: 13px;
     background: var(--panel); border: 1px solid var(--panel-border); max-width: 100%; }
-  .slots li.act { border-color: var(--c); box-shadow: 0 0 14px -3px var(--c); }
+  .slots li.act { border-color: color-mix(in srgb, var(--c) 70%, transparent); background: var(--panel-hi); }
   .slots li.empty { opacity: .5; }
   .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px #ffffff30; flex: none; }
-  .lbl { font-weight: 650; }
+  .lbl { font-weight: 600; }
   .mat { color: var(--muted); }
   .nm { max-width: 14ch; font-size: 12px; }
 

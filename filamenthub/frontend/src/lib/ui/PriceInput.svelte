@@ -52,7 +52,8 @@
   .wrap { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
   .pi { display: flex; gap: 6px; align-items: stretch; min-width: 0; flex: 1; }
   .pi .input { flex: 1; min-width: 0; }
-  .cur { display: flex; border: 1px solid var(--line, rgba(255,255,255,.12)); border-radius: 10px; overflow: hidden; flex: none; }
-  .cur button { background: transparent; color: var(--muted, #9aa3b5); border: 0; padding: 0 11px; font: inherit; font-weight: 700; cursor: pointer; min-width: 36px; }
-  .cur button.on { background: var(--accent, #4f8cff); color: #fff; }
+  .cur { display: flex; gap: 2px; padding: 2px; background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px; flex: none; }
+  .cur button { background: transparent; color: var(--muted); border: 0; border-radius: 8px; padding: 0 12px; font: inherit; font-weight: 500; cursor: pointer; min-width: 36px;
+    transition: background-color .14s, color .14s; }
+  .cur button.on { background: var(--panel-hi); color: var(--text); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
 </style>

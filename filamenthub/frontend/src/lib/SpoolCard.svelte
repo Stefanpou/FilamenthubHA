@@ -26,22 +26,19 @@
 </button>
 
 <style>
-  .card { display: flex; flex-direction: column; text-align: left; cursor: pointer; padding: 0; overflow: hidden; position: relative; width: 100%;
-    transition: transform .35s var(--ease), border-color .3s, box-shadow .3s; }
-  .card::before { content: ""; position: absolute; inset: 0 0 45% 0; background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--c) 30%, transparent), transparent 70%); pointer-events: none; }
-  .card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--c) 55%, transparent); box-shadow: 0 18px 44px -14px color-mix(in srgb, var(--c) 45%, transparent), 0 1px 0 rgba(255,255,255,.06) inset; }
+  .card { display: flex; flex-direction: column; text-align: left; cursor: pointer; padding: 0; overflow: hidden; position: relative; width: 100%; color: inherit;
+    transition: transform .14s var(--ease), border-color .14s, background-color .14s; }
+  .card:hover { border-color: var(--panel-border-hi); background: #1d1d1f; }
   .card:active { transform: scale(.98); }
   .card.arch { opacity: .55; }
-  .art { display: grid; place-items: center; padding: 18px 12px 6px; position: relative; }
-  .meta { display: flex; flex-direction: column; gap: 6px; padding: 8px 14px 14px; position: relative; }
-  .vendor { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .04em; }
-  .name { font-size: 15px; }
-  .g { font-weight: 700; font-size: 14px; white-space: nowrap; flex: none; }
+  .art { display: grid; place-items: center; padding: 20px 12px 8px; position: relative; }
+  .meta { display: flex; flex-direction: column; gap: 8px; padding: 8px 16px 16px; position: relative; }
+  .vendor { font-size: 12px; color: var(--muted); margin-bottom: -6px; }
+  .name { font-size: 15px; font-weight: 500; }
+  .g { font-weight: 500; font-size: 14px; white-space: nowrap; flex: none; }
   .badge.ellipsis { min-width: 0; }
   .in { color: var(--accent); }
-  .use { color: var(--accent); font-weight: 600; font-size: 11.5px; margin-right: 6px; }
-  .noprice { position: absolute; bottom: 4px; left: 10px; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 99px;
-    color: var(--muted); background: color-mix(in srgb, var(--muted) 12%, transparent); border: 1px dashed color-mix(in srgb, var(--muted) 45%, transparent); }
-  .dried { position: absolute; top: 10px; right: 10px; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 99px;
-    color: #ffc27a; background: color-mix(in srgb, #ff9f43 16%, transparent); border: 1px solid color-mix(in srgb, #ff9f43 40%, transparent); }
+  .use { color: var(--accent); font-size: 12px; margin-right: 8px; }
+  .noprice { position: absolute; bottom: 4px; left: 12px; font-size: 12px; color: var(--faint); }
+  .dried { position: absolute; top: 12px; right: 12px; font-size: 12px; padding: 2px 6px; border-radius: 6px; color: var(--warn); background: var(--panel-hi); }
 </style>
