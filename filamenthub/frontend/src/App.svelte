@@ -68,6 +68,7 @@
     </nav>{/if}
     <main class:setup>
       {#if !app.online}<div class="alert err offline">Ingen forbindelse til FilamentHub – prøver igen …</div>{/if}
+      {#if app.reconnecting}<div class="alert info offline"><span class="spinner"></span> Forbinder til Home Assistant igen …</div>{/if}
       {#key route.path}<div class="view"><Page /></div>{/key}
     </main>
   </div>

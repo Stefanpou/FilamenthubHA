@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2
+
+- Når appen har ligget i baggrunden i Home Assistant, viser den ikke længere login-siden. Den venter på, at Home Assistant forbinder igen, og fortsætter selv.
+- After the app has been in the background in Home Assistant it no longer shows the login page; it waits for Home Assistant to reconnect and carries on.
+
 ## 0.3.1
 
 - Finpudsning af det nye udseende: forbrugsgrafen i Historik viser søjlerne igen, rullevinduet er grafitgråt, menuen på telefonen viser hele ordet "Indstillinger", og prisberegneren følger samme stil.

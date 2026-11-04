@@ -32,14 +32,45 @@ export async function loadAuth() {
     const s = await api('api/auth/state');
     Object.assign(auth, s, { ready: true });
     // The kiosk (/ha) authenticates by itself (token); it never shows the login.
-  } catch {
+  } catch (e) {
+    if (e.status === 401 && inIngress()) { recoverIngress(); return; }   // (the boot spinner stays meanwhile)
     auth.ready = true;
   }
 }
-setUnauthorizedHandler(() => { if (!isKiosk()) auth.authenticated = false; else app.error = 'Mangler adgang – tjek token i URL\'en'; });
+setUnauthorizedHandler(() => {
+  if (isKiosk()) app.error = 'Mangler adgang – tjek token i URL\'en';
+  else if (inIngress()) recoverIngress();
+  else auth.authenticated = false;
+});
+
+// Inside Home Assistant the app is reached through Ingress, which needs no password here. A 401 there means HA's
+// ingress session ran out while the app sat in the background (a minimised phone app): HA's frontend makes a new one
+// within about a minute. Wait for it instead of showing the login, and reload the page as a last resort.
+const inIngress = () => auth.ingress || location.pathname.includes('/api/hassio_ingress/');
+let recovering = false;
+async function recoverIngress() {
+  if (recovering) return;
+  recovering = true;
+  app.reconnecting = true;
+  const until = Date.now() + 75000;
+  while (Date.now() < until) {
+    await new Promise((r) => setTimeout(r, 3000));
+    if (document.hidden) continue;
+    try {
+      const r = await fetch('api/auth/state', { credentials: 'same-origin', cache: 'no-store' });
+      if (r.ok) {
+        recovering = false;
+        app.reconnecting = false;
+        if (!auth.ready || !auth.authenticated) loadAuth(); else reloadAll();
+        return;
+      }
+    } catch { /* still offline */ }
+  }
+  location.reload();
+}
 
 // ---- data ----
-export const app = $state({ status: null, spools: null, error: '', online: true });
+export const app = $state({ status: null, spools: null, error: '', online: true, reconnecting: false });
 
 let statusBusy = false;
 export async function refreshStatus() {
