@@ -1,6 +1,7 @@
 <script>
   import Spool from '../lib/ui/Spool.svelte';
   import Icon from '../lib/ui/Icon.svelte';
+  import PriceInput from '../lib/ui/PriceInput.svelte';
   import Scanner from '../lib/Scanner.svelte';
   import SpoolSheet from '../lib/SpoolSheet.svelte';
   import SlicerFields from '../lib/SlicerFields.svelte';
@@ -352,7 +353,7 @@
         <div class="grid2">
           <label class="f">Antal ruller
             <div class="stepper"><button class="btn icon-btn" onclick={() => bump(-1)} aria-label="Færre">−</button><b class="mono">{f.count}</b><button class="btn icon-btn" onclick={() => bump(1)} aria-label="Flere">+</button></div></label>
-          <label class="f">Pris pr. rulle (kr)<input class="input" type="number" inputmode="decimal" min="0" step="0.01" placeholder="valgfri" bind:value={f.price}></label>
+          <div class="f">Pris pr. rulle<PriceInput bind:value={f.price} label="Pris pr. rulle" /></div>
         </div>
         <div class="grid2">
           <label class="f">Placering<input class="input" list="locs2" placeholder="fx Hylde 1" bind:value={f.location}></label>

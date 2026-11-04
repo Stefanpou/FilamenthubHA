@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, config
+from . import auth, config, fx
 from .bambu_cloud import BambuCloud, CloudError, NeedCode, NeedTfa
 from .barcode import normalize_code
 from .catalog import Catalog, same_product_line
@@ -635,7 +635,7 @@ def create_spool(body: NewSpool):
             if spool_weight is not None:
                 fields["spool_weight"] = spool_weight
             if body.remaining_weight is not None:
-                fields["remaining_weight"] = min(body.remaining_weight, weight)
+                fields["remaining_weight"] = body.remaining_weight
             if body.price is not None:
                 fields["price"] = body.price
             if body.comment:
@@ -694,6 +694,12 @@ def catalog_spool_weight(manufacturer: str = Query("", max_length=100), weight: 
                          spool_type: str = Query("", max_length=20)):
     """What an empty spool of this manufacturer / size most likely weighs ({grams, source, label} or null)."""
     return {"estimate": catalog.spool_weight_estimate(manufacturer, weight, spool_type)}
+
+
+@app.get("/api/fx/eur")
+def fx_eur():
+    """EUR -> DKK rate for typing prices in euro."""
+    return fx.eur_dkk(db)
 
 
 @app.get("/api/catalog/vendors")

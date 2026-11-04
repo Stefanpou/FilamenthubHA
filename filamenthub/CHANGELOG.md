@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2
+
+- En rulle, der vejer mere end sin nominelle vægt (fx 1050 g på en "1 kg"-rulle), får nu den vejede vægt i stedet for at blive skåret ned til 1000 g.
+- Priser kan skrives i euro: tryk på € ved prisfeltet, så regnes de om til kroner med dagens ECB-kurs.
+- A spool heavier than its nominal weight now keeps the weighed amount instead of being capped at 1000 g.
+- Prices can be typed in euro and are converted to DKK with the daily ECB rate.
+
 ## 0.2.1
 
 - Lager-visningerne er finpudset: listen viser navn og materiale på to linjer på telefonen, mørke ruller ses tydeligt på farvevæggen, og placeringen står ikke længere dobbelt i tabellen.

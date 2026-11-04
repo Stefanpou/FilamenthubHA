@@ -477,6 +477,8 @@ class LocalStore:
                 else fil.get("weight"))
             if initial is None:
                 raise SpoolmanError("Startvægten er ukendt – kan ikke beregne forbrug", status=400)
+            if rem > initial:   # more on the spool than its nominal weight (overfilled): it started with that much
+                d["initial_weight"], initial = rem, rem
             d["used_weight"] = max(initial - rem, 0.0)
 
     def create_spool(self, **fields) -> dict:
@@ -541,8 +543,9 @@ class LocalStore:
         if sp["initial_weight"] is None:
             raise SpoolmanError("Startvægten er ukendt – kan ikke beregne forbrug", status=400)
         remaining = max(gross - (sp["spool_weight"] or 0), 0.0)
-        used = max(sp["initial_weight"] - remaining, 0.0)
-        self._x("UPDATE spools SET used_weight=? WHERE id=?", (used, int(spool_id)))
+        initial = max(sp["initial_weight"], remaining)   # heavier than nominal (overfilled): it started with that much
+        self._x("UPDATE spools SET used_weight=?, initial_weight=? WHERE id=?",
+                (initial - remaining, initial, int(spool_id)))
         return self.spool(spool_id)
 
     def usage_log(self, spool_id: int | None = None, limit: int = 200) -> list[dict]:

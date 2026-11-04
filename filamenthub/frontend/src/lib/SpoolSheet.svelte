@@ -4,6 +4,7 @@
   import Spool from './ui/Spool.svelte';
   import Icon from './ui/Icon.svelte';
   import Confirm from './ui/Confirm.svelte';
+  import PriceInput from './ui/PriceInput.svelte';
   import SlicerFields from './SlicerFields.svelte';
   import { app, reloadAll, toast, toastErr, go } from './stores.svelte.js';
   import { api, post, patch, del } from './api.js';
@@ -147,7 +148,7 @@
           <input class="input" type="number" inputmode="decimal" min="0" step="1" bind:value={rem}></label>
         <button class="btn primary" style="align-self:flex-end" onclick={saveRem} disabled={busy}>Gem</button>
       </div>
-      <input class="slider" type="range" min="0" max={s.initial || 1000} step="1" value={num(rem) ?? 0} oninput={(e) => (rem = e.target.value)} style="--c:{hex(s.color)}">
+      <input class="slider" type="range" min="0" max={Math.max(s.initial || 1000, num(rem) ?? 0)} step="1" value={num(rem) ?? 0} oninput={(e) => (rem = e.target.value)} style="--c:{hex(s.color)}">
       <div class="row">
         <label class="f grow"><span class="row" style="gap:6px"><Icon name="scale" size={14} /> Vej hele rullen (brutto, gram)</span>
           <input class="input" type="number" inputmode="decimal" min="0" disabled={tare == null}
@@ -178,10 +179,9 @@
         <span class="tiny muted">Gælder alle ruller af dette filament</span></label>
       <label class="f">Placering <input class="input" list="locs" placeholder="fx Hylde 2, Tørreboks" bind:value={loc}></label>
       <datalist id="locs">{#each locations as l}<option value={l}></option>{/each}</datalist>
-      <label class="f">Pris for rullen (kr)
+      <label class="f">Pris for rullen
         <div class="row">
-          <input class="input mono grow" type="number" inputmode="decimal" min="0" step="0.01" placeholder="valgfri" bind:value={price}
-            onkeydown={(e) => e.key === 'Enter' && savePrice()}>
+          <PriceInput bind:value={price} onenter={savePrice} label="Pris for rullen" />
           <button class="btn primary" onclick={savePrice} disabled={busy || num(price) === (s.price ?? null)}>Gem</button>
         </div>
         {#if num(price) > 0 && s.initial > 0}<span class="tiny muted">{(num(price) / s.initial * 1000).toLocaleString('da-DK', { maximumFractionDigits: 2 })} kr/kg – bruges til at regne printenes pris ud</span>
