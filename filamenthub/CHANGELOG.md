@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.6
+
+- Når du sletter en rulle, fjerner FilamentHub også den rulle, den selv oprettede i Bambu Filament Manager (Bambu Studio og Handy). Gamle rester af slettede ruller ryddes op. Ruller, du selv har oprettet i Bambu, røres ikke.
+- Deleting a spool also removes the row FilamentHub created for it in Bambu Filament Manager (Bambu Studio and Handy); leftovers of spools deleted earlier are cleaned up. Rows you created in Bambu yourself are left alone.
+
 ## 0.3.5
 
 - Lageret kan sorteres på rullenummer (laveste eller højeste først), og tabellen har en kolonne med rullenummeret.

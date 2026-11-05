@@ -994,6 +994,26 @@ class FilamentManager:
         self.db.set("fm_no_autocreate", sorted(no_auto))
         by_fm = {v: k for k, v in links.items()}
 
+        # 0b. rows we created for a spool that has since been deleted (or whose id now belongs to a newer spool):
+        #     remove them, so Studio/Handy stop offering them and they do not stand in for the spool that replaced it.
+        orphans = []
+        for r in self.db.query("SELECT fm_id, spool_id, ts FROM fm_created"):
+            fid, sid = r["fm_id"], r["spool_id"]
+            if fid in by_fm or fid not in fm_by_id:
+                continue
+            reg = parse_time(registered.get(sid)) if registered.get(sid) else None
+            if sid not in spools or (reg and r["ts"] and reg > r["ts"]):
+                orphans.append(fid)
+        if orphans:
+            self.db.set("fm_retire", sorted(set(self.db.get("fm_retire", []) or []) | set(orphans)))
+            for fid in orphans:
+                self.db.execute("INSERT OR IGNORE INTO fm_ignored(fm_id) VALUES(?)", (fid,))
+            unbound = [i for i in orphans if not fm_by_id[i].get("inPrinter")]
+            gone = self._delete_retired(unbound, why="deleted") if unbound else []
+            if gone:
+                fm = [h for h in fm if int(h["id"]) not in gone]
+                fm_by_id = {int(h["id"]): h for h in fm}
+
         # 1. adopt unconfirmed creates first, then automatic links: marker note (same base material),
         #    RFID (preferred over a manual row), confident unique matches (exact material)
         stats["linked"] += self._resolve_pending_creates(fm, spools, by_fm)
@@ -1096,28 +1116,32 @@ class FilamentManager:
             self.db.set("fm_retire", sorted(retire))
             self._delete_retired([fm_id], spool_id)
 
-    def _delete_retired(self, fm_ids: list[int], spool_id: int | None = None) -> None:
-        """Delete our own duplicate rows. Bambu keeps a row bound to a slot, so this is retried on later syncs."""
+    def _delete_retired(self, fm_ids: list[int], spool_id: int | None = None, why: str = "rfid") -> list[int]:
+        """Delete our own retired rows (duplicates of an RFID row, or rows of deleted spools). Bambu keeps a row bound
+        to a slot, so this is retried on later syncs. Returns the ids Bambu really deleted."""
         if config.SHADOW:
             self._shadow_skip("DELETE /my/filament/v2/batch")
-            return
+            return []
         try:
             self._call("DELETE", "/my/filament/v2/batch", {"ids": fm_ids})
             left = {int(h["id"]) for h in self.fetch()}
         except CloudError as e:
-            log.warning("could not remove duplicate FM rows %s: %s", fm_ids, e)
-            return
+            log.warning("could not remove retired FM rows %s: %s", fm_ids, e)
+            return []
         if not left:
-            return   # an empty answer proves nothing (Bambu's glitch): check again next time
+            return []   # an empty answer proves nothing (Bambu's glitch): check again next time
         gone = [i for i in fm_ids if i not in left]
         for i in gone:
             self.db.execute("DELETE FROM fm_created WHERE fm_id=?", (i,))
             self.db.execute("DELETE FROM fm_ignored WHERE fm_id=?", (i,))
         retire = [i for i in (self.db.get("fm_retire", []) or []) if i not in gone]
         self.db.set("fm_retire", retire)
-        if gone:
+        if gone and why == "deleted":
+            self.db.event("info", f"{len(gone)} Bambu-spole{'r' if len(gone) > 1 else ''} for slettede ruller fjernet fra Bambu Filament Manager")
+        elif gone:
             who = f" for spole #{spool_id}" if spool_id else ""
             self.db.event("info", f"Den manuelle Bambu-spole{who} er fjernet (RFID-spolen bruges)")
+        return gone
 
     def _push_weight(self, fm: dict, sp: dict) -> bool:
         if config.SHADOW:
