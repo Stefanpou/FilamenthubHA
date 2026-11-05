@@ -19,8 +19,8 @@
     style="{at(x, y, w)}; --c: #{hex(s.color)}" title={title(s)} aria-label={onslot ? `${title(s)} – vælg rulle` : undefined}
     onclick={onslot ? () => onslot(s.key) : undefined} role={onslot ? undefined : 'note'}>
     {#if s.present}
-      <span class="m"><i></i>{s.material || '–'}{#if s.remaining_pct != null}<small> {s.remaining_pct}%</small>{/if}</span>
-      <span class="n">{s.spool?.name || (onslot ? 'Vælg rulle' : 'Ukendt rulle')}</span>
+      <span class="m"><i></i>{s.material || '–'}</span>
+      <span class="n">{#if s.remaining_pct != null}<b>{s.remaining_pct}%</b> {/if}{s.spool?.name || (onslot ? 'Vælg rulle' : 'Ukendt rulle')}</span>
     {:else}
       <span class="m">tom</span>
     {/if}
@@ -39,6 +39,6 @@
   .tag.empty { opacity: .6; border-style: dashed; border-color: #ffffff30; background: #0b0d12cc; }
   .m { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; white-space: nowrap; }
   .m i { width: .8em; height: .8em; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px #ffffff40; flex: none; }
-  .m small { font-weight: 400; opacity: .75; }
+  .n b { font-weight: 600; }
   .n { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .8; font-size: .9em; }
 </style>

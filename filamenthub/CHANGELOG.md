@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.13
+
+- Printerbilledet viser lågen åben, når printeren melder det (X1, H2D og X2D har en lågesensor).
+- Modellen af printet står tydeligere, og firkanten/stregen, der viser det aktuelle lag, er dæmpet.
+- Mærkerne på AMS-slots har plads til procent og navn på en telefon.
+- The printer picture shows the door open when the printer reports it (X1, H2D, X2D door sensor).
+- The print's model is clearer and the current-layer outline is subtler.
+
 ## 0.3.12
 
 - Printerbilledet på forsiden viser nu, hvilket filament der sidder i hvert AMS-slot og på den eksterne holder. Tryk på et mærke for at vælge eller skifte rulle.

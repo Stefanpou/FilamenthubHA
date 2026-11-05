@@ -97,7 +97,7 @@
     // current-layer outline
     const rg = track(new T.BufferGeometry());
     rg.setAttribute('position', new T.Float32BufferAttribute(new Array(12).fill(0), 3));
-    const rm = track(new T.LineBasicMaterial({ color: 0x38e8c6, transparent: true, opacity: 0.95 }));
+    const rm = track(new T.LineBasicMaterial({ color: 0x38e8c6, transparent: true, opacity: 0.22 }));   // faint: the model is the point
     ring = new T.LineLoop(rg, rm);
     ring.visible = false;
     modelGroup.add(ring);
@@ -157,10 +157,10 @@
         color: col, roughness: 0.5, metalness: 0.06, side: T.DoubleSide, clippingPlanes: [cutPlane],
       }));
       const ghost = new T.Mesh(flat, new T.MeshBasicMaterial({
-        color: 0x9fb4ff, transparent: true, opacity: 0.09, depthWrite: false, side: T.DoubleSide, clippingPlanes: [ghostPlane],
+        color: 0xb8c8ff, transparent: true, opacity: 0.2, depthWrite: false, side: T.DoubleSide, clippingPlanes: [ghostPlane],
       }));
       const edges = new T.LineSegments(edgeGeo, new T.LineBasicMaterial({
-        color: 0x8fa6ff, transparent: true, opacity: 0.32, clippingPlanes: [ghostPlane],
+        color: 0xaabbff, transparent: true, opacity: 0.55, clippingPlanes: [ghostPlane],
       }));
       modelGroup.add(solid, ghost, edges);
       parts.push({ geo, flat, edgeGeo, solid, ghost, edges });
@@ -364,21 +364,21 @@
   canvas.hide { visibility: hidden; }
   .cover { position: absolute; inset: 6% 12% 4%; pointer-events: none; }
   .cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-  .cover .ghost { filter: grayscale(1) brightness(.8); opacity: .22; }
+  .cover .ghost { filter: grayscale(.6) brightness(1.1); opacity: .5; }
   .cover .solid { transition: clip-path 1.2s var(--ease, ease); }
-  .cover .edge { position: absolute; left: 4%; right: 4%; height: 2px; background: var(--accent); box-shadow: 0 0 12px var(--accent);
+  .cover .edge { position: absolute; left: 10%; right: 10%; height: 1px; background: color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 40%, transparent);
     transition: bottom 1.2s var(--ease, ease); animation: pulse 1.6s ease-in-out infinite; }
   .cover.still .edge { animation: none; }
   @keyframes pulse { 50% { opacity: .45; } }
   .stand { position: absolute; inset: 10% 22% 8%; display: flex; align-items: flex-end; justify-content: center; gap: 14px; pointer-events: none; }
   .stand .block { position: relative; width: 46%; height: 82%; border-radius: 6px 6px 3px 3px; overflow: hidden;
     background: repeating-linear-gradient(0deg, #ffffff10 0 2px, transparent 2px 6px), #ffffff08;
-    border: 1px dashed #ffffff30; box-shadow: inset 0 0 18px #0006; }
+    border: 1px dashed #ffffff18; box-shadow: inset 0 0 18px #0004; }
   .stand .fill { position: absolute; left: 0; right: 0; bottom: 0; transition: height 1.2s var(--ease, ease);
     background: repeating-linear-gradient(0deg, #00000026 0 2px, transparent 2px 6px),
       linear-gradient(90deg, color-mix(in srgb, var(--fc) 70%, #000), var(--fc) 45%, color-mix(in srgb, var(--fc) 80%, #fff) 60%, color-mix(in srgb, var(--fc) 65%, #000));
     box-shadow: 0 0 22px -6px var(--fc); }
-  .stand .edge { position: absolute; left: -2px; right: -2px; height: 2px; background: var(--accent); box-shadow: 0 0 12px var(--accent);
+  .stand .edge { position: absolute; left: 0; right: 0; height: 1px; background: color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 40%, transparent);
     transition: bottom 1.2s var(--ease, ease); animation: pulse 1.6s ease-in-out infinite; }
   .stand.still .edge { animation: none; }
   .stand .lbl { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; color: var(--text, #e8ecf4); text-shadow: 0 1px 6px #000; }

@@ -26,6 +26,7 @@
   const online = $derived(!!printer?.online);
   const nozzles = $derived(printer?.nozzles || []);
   const lightOn = $derived(printer?.light !== false);
+  const doorOpen = $derived(printer?.door_open === true);   // only printers with a door sensor report it
   const speedLvl = $derived(printer?.speed_level || 2);
   const model = $derived(printer?.model && printer.model !== 'Bambu Lab printer' ? printer.model : '');
 
@@ -323,6 +324,14 @@
     </g>
 
     {#if !a1}
+      {#if doorOpen}
+      <!-- door open: the glass door swung out to the left on its hinges, the chamber in plain view -->
+      <rect x="146" y="322" width="358" height="420" rx="5" fill="none" stroke="#ffb547" stroke-opacity="0.45" stroke-width="1.5"/>
+      <path d="M146 322 L86 298 L86 766 L146 742 Z" fill="url(#pg-glass)" stroke="#ffffff30"/>
+      <path d="M146 322 L86 298 L86 766 L146 742 Z" fill="#cfe6ff" opacity="0.05"/>
+      <path d="M140 330 L118 322 L118 742 L140 736 Z" fill="#fff" opacity="0.04"/>
+      <rect x="90" y="500" width="8" height="40" rx="4" fill="url(#pg-handle)" stroke="#6b717c" stroke-width="0.6"/>
+      {:else}
       <!-- glass door reflections + handle -->
       <rect x="146" y="322" width="358" height="420" rx="5" fill="url(#pg-glass)"/>
       <path d="M176 322 L262 322 L188 742 L146 742 L146 470 Z" fill="#fff" opacity="0.03"/>
@@ -330,6 +339,7 @@
       <rect x="146" y="322" width="358" height="420" rx="5" fill="none" stroke="#ffffff1c"/>
       <rect x="470" y="501" width="48" height="19" rx="9.5" fill="url(#pg-handle)" stroke="#6b717c" stroke-width="0.8"/>
       <text x="494" y="513.5" text-anchor="middle" font-size="6" font-weight="700" fill="#3a3e45" class="logo">Bambu Lab</text>
+      {/if}
     {/if}
   </svg>
   <SlotHotspots view={[VX, VY, VW, VH]} {bays} {ext} {onslot} bayY={84}

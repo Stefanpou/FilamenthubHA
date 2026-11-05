@@ -190,6 +190,17 @@ def parse_light(state: dict):
     return None
 
 
+def parse_door(state: dict):
+    """Door sensor (X1, H2D, X2D): bit 23 of the hex `stat` field; None when the printer does not report it."""
+    stat = state.get("stat")
+    if not isinstance(stat, str) or not stat.strip():
+        return None
+    try:
+        return bool(int(stat, 16) & 0x00800000)
+    except ValueError:
+        return None
+
+
 def parse_extras(state: dict) -> dict:
     """Extra, optional fields the UI can use (aux/chamber fans, work light, error)."""
     out: dict = {}
@@ -200,6 +211,9 @@ def parse_extras(state: dict) -> dict:
     for r in state.get("lights_report") or []:
         if isinstance(r, dict) and r.get("node") == "work_light":
             out["work_light"] = str(r.get("mode")) in ("on", "flashing")
+    door = parse_door(state)
+    if door is not None:
+        out["door_open"] = door
     err = _num(state.get("print_error")) or _num(state.get("mc_print_error_code"))
     out["error"] = int(err) if err else 0
     return out
