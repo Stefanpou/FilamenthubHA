@@ -5,6 +5,7 @@
   import Scanner from '../lib/Scanner.svelte';
   import SpoolSheet from '../lib/SpoolSheet.svelte';
   import SlicerFields from '../lib/SlicerFields.svelte';
+  import LocationPicker from '../lib/LocationPicker.svelte';
   import { app, route, go, toast, toastErr, reloadAll } from '../lib/stores.svelte.js';
   import { api, post, patch } from '../lib/api.js';
   import { debounce, hex, num, fmtG, today, autoKind, KIND_NAMES } from '../lib/util.js';
@@ -224,8 +225,10 @@
     try {
       const res = await post('api/spools', body);
       created = Array.isArray(res) ? res : [];
-      if (f.location?.trim()) {
-        await Promise.all(created.map((s) => patch(`api/v1/spool/${s.id}`, { location: f.location.trim() }).catch(() => {})));
+      if (f.location?.trim()) {   // one at a time: a fixed location gives each spool the next free place
+        let full = null;
+        for (const s of created) { try { await patch(`api/spools/${s.id}`, { location: f.location.trim() }); } catch (e) { full ??= e; } }
+        if (full) toastErr(full);
       }
       await reloadAll();
       if (slotKey) { toast(`${created.length} rulle oprettet og sat i ${slotLabel}`); go('/'); return; }
@@ -356,8 +359,7 @@
           <div class="f">Pris pr. rulle<PriceInput bind:value={f.price} label="Pris pr. rulle" /></div>
         </div>
         <div class="grid2">
-          <label class="f">Placering<input class="input" list="locs2" placeholder="fx Hylde 1" bind:value={f.location}></label>
-          <datalist id="locs2">{#each [...new Set((app.spools || []).map((s) => s.location).filter(Boolean))] as l}<option value={l}></option>{/each}</datalist>
+          <LocationPicker bind:value={f.location} places={f.count === 1} />
           <label class="f">Tilbage nu (g)<input class="input" type="number" inputmode="decimal" min="0" placeholder="fuld rulle" bind:value={f.remaining}></label>
         </div>
         <label class="f">Tom rulle vejer (g)<input class="input" type="number" inputmode="decimal" min="0" placeholder="ukendt" bind:value={f.spool_weight} oninput={tareInput}></label>

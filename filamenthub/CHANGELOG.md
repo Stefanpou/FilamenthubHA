@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.9
+
+- Nyt: faste placeringer med et antal pladser (Indstillinger > Placeringer). På en rulle vælger du stedet og en ledig plads, eller lader den tage den første ledige. Lageret kan filtreres og grupperes efter placering.
+- Nyt: "Nulstil forbrug" på en rulle. Den starter forfra på den vægt, den har nu, og vises som 100 % – fx når en ny rulle vejede lidt under det, der står på etiketten. Prisen pr. kg ændres ikke.
+- New: fixed locations with a number of places (Settings > Placeringer). On a spool, pick the location and a free place, or let it take the first free one. Stock can be filtered and grouped by location.
+- New: "Reset usage" on a spool starts it over at its current weight (100 %), e.g. a new spool that weighed a little under its label. The price per kg stays.
+
 ## 0.3.8
 
 - Nyt: live-kamera på forsiden. Slå det til under Indstillinger > Funktioner og vælg printerens kamera fra Home Assistant. Tryk på billedet for fuld skærm.

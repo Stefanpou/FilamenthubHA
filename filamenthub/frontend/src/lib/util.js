@@ -52,3 +52,16 @@ export function autoKind(s) {
 // The kind set by hand on the filament wins ("-" = plain material), else the one found in the text.
 const kind = (s) => { const k = s.details?.category; return k === '-' ? '' : k || autoKind(s); };
 export const category = (s) => (kind(s) ? `${s.material} ${kind(s)}` : '');
+
+// A location text against the fixed locations: [location, place] ("Tørreboks - 2" -> [Tørreboks, 2]; the bare name -> place null).
+export function parseLoc(text, fixed) {
+  const t = String(text || '').trim();
+  for (const l of fixed || []) {
+    if (t === l.name) return [l, null];
+    const rest = t.startsWith(l.name + ' - ') ? t.slice(l.name.length + 3) : '';
+    if (/^\d+$/.test(rest)) return [l, Number(rest)];
+  }
+  return null;
+}
+// The location to filter and group by: a fixed location's name without the place.
+export const locBase = (text, fixed) => parseLoc(text, fixed)?.[0].name ?? (String(text || '').trim());

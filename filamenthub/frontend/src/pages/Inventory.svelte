@@ -5,7 +5,7 @@
   import Spool from '../lib/ui/Spool.svelte';
   import Icon from '../lib/ui/Icon.svelte';
   import { app, route, go } from '../lib/stores.svelte.js';
-  import { fmtKg, isLow, pctOf, hex, category as cat } from '../lib/util.js';
+  import { fmtKg, isLow, pctOf, hex, locBase, category as cat } from '../lib/util.js';
 
   let q = $state(''), material = $state(''), vendor = $state(''), location = $state(''), colorFam = $state('');
   let low = $state(route.query.low === '1'), archived = $state(false), noPrice = $state(false), unweighed = $state(false), sort = $state('name'), showFilters = $state(false);
@@ -40,7 +40,9 @@
   const chips = $derived([...new Set(all.filter((s) => (archived ? s.archived : !s.archived)).map((s) => cat(s) || s.material))]
     .sort((a, b) => a.localeCompare(b, 'da')).map((v) => ({ v, sub: !materials.includes(v) })));
   const vendors = $derived(uniq((s) => s.vendor));
-  const locations = $derived(uniq((s) => s.location));
+  // a fixed location is one choice, whatever place the spool has in it
+  const base = (s) => locBase(s.location, app.locations?.fixed);
+  const locations = $derived(uniq(base));
   const fams = $derived([...new Set(live.map((s) => family(s.color)))]);
   const inSlot = $derived(Object.fromEntries((app.status?.slots || []).filter((s) => s.assignment).map((s) => [s.assignment.spool.id, s.label])));
 
@@ -53,7 +55,7 @@
     if (t) l = l.filter((s) => `${s.vendor} ${s.material} ${cat(s)} ${s.name} #${s.id} ${s.location} ${s.comment}`.toLowerCase().includes(t));
     if (material) l = l.filter((s) => (cat(s) || s.material) === material);   // each spool in one chip: 'PLA' is plain PLA, 'PLA Silk' the silk
     if (vendor) l = l.filter((s) => s.vendor === vendor);
-    if (location) l = l.filter((s) => s.location === location);
+    if (location) l = l.filter((s) => base(s) === location);
     if (colorFam) l = l.filter((s) => family(s.color) === colorFam);
     if (low) l = l.filter(isLow);
     if (noPrice) l = l.filter((s) => s.kg_price == null);

@@ -5,6 +5,7 @@
   import HaSettings from '../lib/settings/HaSettings.svelte';
   import PowerSettings from '../lib/settings/PowerSettings.svelte';
   import FeatureSettings from '../lib/settings/FeatureSettings.svelte';
+  import LocationSettings from '../lib/settings/LocationSettings.svelte';
   import Icon from '../lib/ui/Icon.svelte';
   import { app, auth, toast, toastErr, reloadAll } from '../lib/stores.svelte.js';
   import { api, post } from '../lib/api.js';
@@ -79,6 +80,7 @@
     {/if}
   </section>
 
+  <section class="glass pad stack rise" style="--i:1"><h2><Icon name="grid" size={20} /> Placeringer</h2><LocationSettings /></section>
   <section class="glass pad stack rise" style="--i:1"><h2><Icon name="sparkle" size={20} /> Bambu Filament Manager</h2><FmSettings /></section>
   <section class="glass pad stack rise" style="--i:2"><h2><Icon name="link" size={20} /> Spoolman-kompatibel API</h2><ApiToken /></section>
   <section class="glass pad stack rise" style="--i:3"><h2><Icon name="home" size={20} /> Home Assistant</h2><HaSettings /></section>

@@ -1,7 +1,8 @@
 <!-- Alternative Lager views: compact list, sortable table, grouped cards and a colour wall. The card grid lives in Inventory. -->
 <script>
   import SpoolCard from './SpoolCard.svelte';
-  import { fmtG, fmtKg, fmtDate, hex, pctOf, levelClass, isLow, category } from './util.js';
+  import { app } from './stores.svelte.js';
+  import { fmtG, fmtKg, fmtDate, hex, pctOf, levelClass, isLow, category, locBase } from './util.js';
 
   let { view, spools, inSlot = {}, groupBy = 'material', family, onopen } = $props();
 
@@ -36,12 +37,12 @@
       const x = get(a), y = get(b);
       if (x == null || x === '') return y == null || y === '' ? 0 : 1;   // empty values always last
       if (y == null || y === '') return -1;
-      return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'da')) * tdir;
+      return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'da', { numeric: true })) * tdir;
     });
   });
 
   // ---- grouped
-  const GROUP_KEY = { material: label, vendor: (s) => s.vendor || 'Ukendt mærke', location: (s) => s.location || 'Ingen placering', color: (s) => family(s.color) };
+  const GROUP_KEY = { material: label, vendor: (s) => s.vendor || 'Ukendt mærke', location: (s) => locBase(s.location, app.locations?.fixed) || 'Ingen placering', color: (s) => family(s.color) };
   const groups = $derived.by(() => {
     const m = new Map();
     for (const s of spools) { const k = GROUP_KEY[groupBy](s); if (!m.has(k)) m.set(k, []); m.get(k).push(s); }

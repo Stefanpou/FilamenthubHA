@@ -6,6 +6,7 @@
   import Confirm from './ui/Confirm.svelte';
   import PriceInput from './ui/PriceInput.svelte';
   import SlicerFields from './SlicerFields.svelte';
+  import LocationPicker from './LocationPicker.svelte';
   import { app, reloadAll, toast, toastErr, go } from './stores.svelte.js';
   import { api, post, patch, del } from './api.js';
   import { fmtG, fmtG1, fmtTs, fmtIso, fmtDate, hex, num, pctOf, spoolName, agoDa, today, autoKind, KIND_NAMES } from './util.js';
@@ -14,7 +15,6 @@
   const s = $derived((app.spools || []).find((x) => x.id === id));
   const slots = $derived((app.status?.slots || []).filter((x) => x.present || x.kind === 'ext'));
   const inSlot = $derived((app.status?.slots || []).find((x) => x.assignment?.spool?.id === id));
-  const locations = $derived([...new Set((app.spools || []).map((x) => x.location).filter(Boolean))]);
 
   let rem = $state(''), gross = $state(''), loc = $state(''), comment = $state(''), price = $state(''), slotSel = $state('');
   let busy = $state(false), confirm = $state(null), usage = $state(null);
@@ -97,7 +97,7 @@
     run(async () => { const r = await patch(`api/spools/${id}`, { gross_weight: v }); rem = String(Math.round(r?.remaining ?? v - tare)); gross = ''; }, 'Vejet og gemt');
   };
   const saveDetails = () => run(async () => {
-    if (loc !== (s.location || '')) await patch(`api/v1/spool/${id}`, { location: loc });
+    if (loc !== (s.location || '')) loc = (await patch(`api/spools/${id}`, { location: loc })).location || '';
     if (comment !== (s.comment || '')) await patch(`api/spools/${id}`, { comment });
     await putPrice();
   }, 'Gemt');
@@ -116,6 +116,7 @@
   };
   const archive = () => run(async () => { await patch(`api/spools/${id}`, { archived: !s.archived }); }, s.archived ? 'Gendannet' : 'Arkiveret').then(() => (confirm = null));
   const remove = () => run(async () => { await del(`api/v1/spool/${id}`); onclose(); }, 'Rullen er slettet').then(() => (confirm = null));
+  const resetUsage = () => run(() => patch(`api/spools/${id}`, { reset_usage: true }), 'Forbruget er nulstillet').then(() => (confirm = null));
   const setDried = (d) => run(() => patch(`api/spools/${id}`, d ? { dried: d } : { clear_dried: true }), d ? 'Tørret-dato gemt' : 'Tørret-dato fjernet');
   const setCategory = (v) => run(() => patch(`api/spools/${id}`, { category: v }), 'Kategori gemt');
   const untag = () => run(() => patch(`api/spools/${id}`, { clear_tag: true }), 'RFID fjernet');
@@ -128,7 +129,8 @@
     <Spool color={s.color} colors={s.colors} pct={pctOf(s)} size={150} tilt />
     <div class="stats">
       <div class="big mono">{fmtG1(s.remaining)}</div>
-      <div class="muted small">af {fmtG(s.initial)} · {Math.round(pctOf(s) * 100)} % tilbage</div>
+      <div class="muted small">af {fmtG(s.initial)} · {Math.round(pctOf(s) * 100)} % tilbage
+        {#if s.remaining > 0 && s.remaining < s.initial}<button class="linkbtn" onclick={() => (confirm = 'reset')} disabled={busy}>Nulstil forbrug</button>{/if}</div>
       <div class="row wrap" style="margin-top:10px; gap:6px">
         <span class="badge">#{s.id}</span><span class="badge accent">{s.material}</span>
         {#if s.archived}<span class="badge warn">Arkiveret</span>{/if}
@@ -177,8 +179,7 @@
           {#if s.details?.category && s.details.category !== '-' && !KIND_NAMES.includes(s.details.category)}<option value={s.details.category}>{s.material} {s.details.category}</option>{/if}
         </select>
         <span class="tiny muted">Gælder alle ruller af dette filament</span></label>
-      <label class="f">Placering <input class="input" list="locs" placeholder="fx Hylde 2, Tørreboks" bind:value={loc}></label>
-      <datalist id="locs">{#each locations as l}<option value={l}></option>{/each}</datalist>
+      <LocationPicker bind:value={loc} spoolId={id} />
       <label class="f">Pris for rullen
         <div class="row">
           <PriceInput bind:value={price} onenter={savePrice} label="Pris for rullen" />
@@ -264,6 +265,8 @@
 </Sheet>
 {#if confirm === 'archive'}
   <Confirm title={s.archived ? 'Gendan rulle?' : 'Arkivér rulle?'} message={s.archived ? 'Rullen kommer tilbage i lageret.' : 'Rullen skjules fra lageret og fjernes fra printerens slot. Forbrugshistorikken bevares.'} confirmLabel={s.archived ? 'Gendan' : 'Arkivér'} onconfirm={archive} oncancel={() => (confirm = null)} />
+{:else if confirm === 'reset'}
+  <Confirm title="Nulstil forbrug?" message={`Rullen starter forfra på ${fmtG(s.remaining)} og vises som 100 % tilbage – fx når en ny rulle vejede lidt under ${fmtG(s.initial)}. Prisen pr. kg og printhistorikken ændres ikke.`} confirmLabel="Nulstil" onconfirm={resetUsage} oncancel={() => (confirm = null)} />
 {:else if confirm === 'delete'}
   <Confirm danger title="Slet rulle permanent?" message="Rullen slettes for altid. Overvej at arkivere i stedet, hvis du vil bevare historikken." confirmLabel="Slet" onconfirm={remove} oncancel={() => (confirm = null)} />
 {/if}

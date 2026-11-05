@@ -70,7 +70,7 @@ async function recoverIngress() {
 }
 
 // ---- data ----
-export const app = $state({ status: null, spools: null, error: '', online: true, reconnecting: false });
+export const app = $state({ status: null, spools: null, locations: null, error: '', online: true, reconnecting: false });
 
 let statusBusy = false;
 export async function refreshStatus() {
@@ -86,6 +86,7 @@ export async function refreshStatus() {
   } finally { statusBusy = false; }
 }
 export async function refreshSpools() {
+  refreshLocations();
   try {
     const list = await api('api/spools?archived=true');
     app.spools = Array.isArray(list) ? list : [];
@@ -93,6 +94,11 @@ export async function refreshSpools() {
     if (app.spools === null) app.spools = [];
     if (e.status !== 401) app.error = e.message;
   }
+}
+// Fixed locations (Indstillinger > Placeringer) with their places, and the free-text locations in use.
+export async function refreshLocations() {
+  if (isKiosk()) return;   // (not among the kiosk's paths)
+  try { app.locations = await api('api/locations'); } catch { /* keeps the last list */ }
 }
 export const activeSpools = () => (app.spools || []).filter((s) => !s.archived);
 

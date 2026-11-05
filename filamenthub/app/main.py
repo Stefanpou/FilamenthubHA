@@ -417,6 +417,8 @@ class SpoolPatch(BaseModel):
     price: float | None = Field(default=None, ge=0, le=100000)        # what the spool cost (kr)
     clear_price: bool | None = None
     category: str | None = Field(default=None, max_length=40)        # the filament's kind ("Basic"); "" = automatic
+    location: str | None = Field(default=None, max_length=120)      # a fixed location's bare name takes a free place
+    reset_usage: bool | None = None    # start over at what is on the spool now (100 % left)
 
 
 @app.get("/api/spools")
@@ -872,9 +874,14 @@ def patch_spool(spool_id: int, body: SpoolPatch):
             spoolman.measure(spool_id, body.gross_weight)
             engine.note_weighed(spool_id)
             db.event("info", f"Spole #{spool_id} vejet: {body.gross_weight:.0f} g brutto")
+        if body.reset_usage:
+            sp = spoolman.reset_usage(spool_id)
+            db.event("info", f"Spole #{spool_id}: forbrug nulstillet – starter nu på {sp['remaining_weight']:.0f} g")
         fields = {}
         if body.remaining_weight is not None:
             fields["remaining_weight"] = body.remaining_weight
+        if body.location is not None:
+            fields["location"] = locations.resolve(spoolman, db, spool_id, body.location)
         if body.archived is not None:
             fields["archived"] = body.archived
         if body.comment is not None:
@@ -1411,6 +1418,7 @@ from . import api_ha; app.include_router(api_ha.router); api_ha.attach(app)
 from . import power; app.include_router(power.router); power.attach(app)
 from . import api_slicer; app.include_router(api_slicer.router)
 from . import features; app.include_router(features.router); features.attach(app)
+from . import locations; app.include_router(locations.router)
 
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 

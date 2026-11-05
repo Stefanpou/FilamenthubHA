@@ -566,6 +566,20 @@ class LocalStore:
                 (initial - remaining, initial, nominal, int(spool_id)))
         return self.spool(spool_id)
 
+    def reset_usage(self, spool_id: int) -> dict:
+        """Start the spool over at what is on it now (100 % left), e.g. a new spool that weighed a little under its
+        label. The price stays for the weight it was sold as."""
+        with self.lock:
+            sp = self.spool(spool_id)
+            if sp["initial_weight"] is None:
+                raise SpoolmanError("Startvægten er ukendt – kan ikke nulstille forbruget", status=400)
+            if not sp["remaining_weight"]:
+                raise SpoolmanError("Rullen er tom – ret vægten først", status=400)
+            nominal = self._raw_spool(spool_id)["nominal_weight"] or sp["initial_weight"]
+            self._x("UPDATE spools SET initial_weight=?, used_weight=0, nominal_weight=? WHERE id=?",
+                    (sp["remaining_weight"], nominal, int(spool_id)))
+        return self.spool(spool_id)
+
     def usage_log(self, spool_id: int | None = None, limit: int = 200) -> list[dict]:
         if spool_id is None:
             return self._q("SELECT * FROM usage ORDER BY id DESC LIMIT ?", (limit,))
