@@ -412,6 +412,8 @@ class ModelCache:
         status = "none"
         if meta and meta.get("ok"):
             status = "ready"
+            if self._recheck_due(meta):
+                self._kick(job, engine)
         else:
             status = self._kick(job, engine)
         out = {
@@ -454,6 +456,13 @@ class ModelCache:
             ex, self._exec = self._exec, None
         if ex:
             ex.shutdown(wait=False, cancel_futures=True)
+
+    COVER_RECHECKS = (600, 3600)   # a picture-only job is looked up again: the cloud can list the project file late
+
+    def _recheck_due(self, meta: dict) -> bool:
+        n = int(meta.get("rechecks") or 0)
+        return (meta.get("kind") == "cover" and n < len(self.COVER_RECHECKS)
+                and time.time() - float(meta.get("ts") or 0) > self.COVER_RECHECKS[n])
 
     def _read_meta(self, d):
         try:
@@ -599,8 +608,10 @@ class ModelCache:
         d = self._dir(tid)
         d.mkdir(parents=True, exist_ok=True)
         (d / "cover.png").write_bytes(cover)
+        prev = self._read_meta(d) or {}
         meta = {"ok": True, "kind": "cover", "plate": plate, "task_id": tid,
-                "name": task.get("title") or job.get("name") or "", "error": why, "ts": time.time()}
+                "name": task.get("title") or job.get("name") or "", "error": why, "ts": time.time(),
+                "rechecks": int(prev.get("rechecks") or 0) + 1 if prev.get("kind") == "cover" else 0}
         (d / "meta.json").write_text(json.dumps(meta))
         return meta
 

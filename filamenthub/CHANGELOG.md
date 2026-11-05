@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.7
+
+- Når Bambu Cloud kun har et billede af printet, prøver FilamentHub igen efter 10 minutter og efter en time at hente 3D-modellen, som du kan dreje.
+- When Bambu Cloud only has a picture of the print, FilamentHub tries again after 10 minutes and after an hour to fetch the rotatable 3D model.
+
 ## 0.3.6
 
 - Når du sletter en rulle, fjerner FilamentHub også den rulle, den selv oprettede i Bambu Filament Manager (Bambu Studio og Handy). Gamle rester af slettede ruller ryddes op. Ruller, du selv har oprettet i Bambu, røres ikke.
