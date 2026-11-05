@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.8
+
+- Nyt: live-kamera på forsiden. Slå det til under Indstillinger > Funktioner og vælg printerens kamera fra Home Assistant. Tryk på billedet for fuld skærm.
+- New: live camera on the dashboard. Switch it on under Settings > Features and pick the printer's Home Assistant camera; tap the picture for full screen.
+
 ## 0.3.7
 
 - Når Bambu Cloud kun har et billede af printet, prøver FilamentHub igen efter 10 minutter og efter en time at hente 3D-modellen, som du kan dreje.

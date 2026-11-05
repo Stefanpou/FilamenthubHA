@@ -3,6 +3,7 @@
   plug      a button for the printer's smart plug (a Home Assistant switch)
   auto_off  turn the plug off after a finished print, once the nozzle has cooled down
   photo     a picture of the build plate from a Home Assistant camera when a print finishes
+  live_camera  the printer's camera live on the dashboard (frames from the same Home Assistant camera)
   library   a print library: every finished print with its photo, cover, project file (3MF from Bambu Cloud),
             filaments and cost - searchable, and the file can be downloaded to print it again
 
@@ -23,7 +24,7 @@ import zipfile
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from . import config, power
@@ -34,7 +35,7 @@ router = APIRouter()
 
 KEY = "features"
 DEFAULTS = {"plug": False, "plug_entity": "", "auto_off": False, "off_delay_min": 10, "off_max_temp": 50,
-            "photo": False, "camera_entity": "", "library": False}
+            "photo": False, "camera_entity": "", "library": False, "live_camera": False}
 WATCH = 10.0                 # seconds between looks at the printer state
 ARCHIVE_TRIES = (60, 120, 300, 600, 1200, 1800)   # Bambu Cloud lists a task a little after it ends
 PHOTO_TRIES = (0, 20, 60, 180, 300)   # seconds after the end: the Bambu camera in HA often fails right at the finish
@@ -325,6 +326,7 @@ class FeaturesIn(BaseModel):
     photo: bool | None = None
     camera_entity: str | None = Field(default=None, max_length=200)
     library: bool | None = None
+    live_camera: bool | None = None
 
 
 @router.get("/api/features")
@@ -363,6 +365,26 @@ def entities():
         v.sort(key=lambda r: (r["state"] == "unavailable",
                               not any(x in (r["entity_id"] + str(r["name"])).lower() for x in likely), str(r["name"]).lower()))
     return out
+
+
+# One frame shared by every viewer, so several open dashboards do not each pull the camera.
+_frame = {"ts": 0.0, "entity": "", "img": b"", "type": "image/jpeg"}
+_frame_lock = threading.Lock()
+FRAME_MAX_AGE = 0.8
+
+
+@router.get("/api/printer/camera")
+def camera_frame():
+    db = _main().db
+    cfg = settings(db)
+    if not cfg["live_camera"] or not cfg["camera_entity"]:
+        raise HTTPException(404, "Live-kamera er slået fra")
+    with _frame_lock:
+        if time.time() - _frame["ts"] > FRAME_MAX_AGE or _frame["entity"] != cfg["camera_entity"]:
+            img, ctype = _ha(db).camera_image(cfg["camera_entity"], max_bytes=8 * 1024 * 1024)
+            _frame.update(ts=time.time(), entity=cfg["camera_entity"], img=img, type=ctype)
+        img, ctype = _frame["img"], _frame["type"]
+    return Response(img, media_type=ctype, headers={"Cache-Control": "no-store"})
 
 
 @router.get("/api/plug")

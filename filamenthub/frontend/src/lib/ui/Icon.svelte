@@ -13,6 +13,7 @@
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
     scan: '<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M7 12h10"/>',
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
+    expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
     check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
     back: '<path d="M15 5l-7 7 7 7"/>',
     chev: '<path d="m9 5 7 7-7 7"/>',

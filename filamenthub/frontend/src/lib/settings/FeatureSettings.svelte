@@ -6,7 +6,7 @@
   let ft = $state(null), ents = $state(null), entErr = $state(''), imp = $state(null);
   let wait = $state(''), maxT = $state('');
   onMount(async () => {
-    try { ft = await api('api/features'); wait = String(ft.off_delay_min); maxT = String(ft.off_max_temp); if (ft.plug || ft.photo) loadEntities(); } catch (e) { toastErr(e); }
+    try { ft = await api('api/features'); wait = String(ft.off_delay_min); maxT = String(ft.off_max_temp); if (ft.plug || ft.photo || ft.live_camera) loadEntities(); } catch (e) { toastErr(e); }
     try { imp = await api('api/library/import'); if (imp.running) poll(); } catch { /* library not available */ }
   });
   async function loadEntities() {
@@ -16,7 +16,7 @@
   async function save(patch) {
     try { ft = await post('api/features', patch); toast('Gemt'); } catch (e) { toastErr(e); }
   }
-  function flip(key, on) { save({ [key]: on }); if (on && (key === 'plug' || key === 'photo')) loadEntities(); }
+  function flip(key, on) { save({ [key]: on }); if (on && (key === 'plug' || key === 'photo' || key === 'live_camera')) loadEntities(); }
   const saveNum = (key, v, lo) => { const n = Number(String(v).replace(',', '.')); if (Number.isFinite(n) && n >= lo) save({ [key]: n }); };
   const label = (r) => `${r.name} (${r.entity_id}) – ${r.state}`;
 
@@ -59,9 +59,11 @@
     {/if}
   {/if}
 
+  <label class="row sw"><input type="checkbox" checked={ft.live_camera} onchange={(e) => flip('live_camera', e.target.checked)}>
+    <span><b>Live-kamera på forsiden</b><br><span class="tiny muted">Viser printerens kamera fra Home Assistant under printeren. Tryk på billedet for fuld skærm.</span></span></label>
   <label class="row sw"><input type="checkbox" checked={ft.photo} onchange={(e) => flip('photo', e.target.checked)}>
     <span><b>Billede af pladen når printet er færdigt</b><br><span class="tiny muted">Tager et billede med et kamera i Home Assistant, når et print er færdigt.</span></span></label>
-  {#if ft.photo}
+  {#if ft.photo || ft.live_camera}
     {#if ents}
       <label class="f">Kamera
         <select class="input" value={ft.camera_entity} onchange={(e) => save({ camera_entity: e.target.value })}>

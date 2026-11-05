@@ -1,5 +1,6 @@
 <script>
   import PrinterView from '../lib/printer/PrinterView.svelte';
+  import CameraFeed from '../lib/printer/CameraFeed.svelte';
   import SlotStrip from '../lib/SlotStrip.svelte';
   import LowStock from '../lib/LowStock.svelte';
   import SpoolSheet from '../lib/SpoolSheet.svelte';
@@ -58,6 +59,7 @@
   {/if}
 
   <PrinterView />
+  {#if ft?.live_camera && ft.camera_entity}<CameraFeed />{/if}
 
   {#if plug?.enabled}
     <div class="glass pad row plug rise">
