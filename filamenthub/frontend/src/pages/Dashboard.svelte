@@ -2,6 +2,7 @@
   import PrinterView from '../lib/printer/PrinterView.svelte';
   import CameraFeed from '../lib/printer/CameraFeed.svelte';
   import SlotStrip from '../lib/SlotStrip.svelte';
+  import SlotPicker from '../lib/SlotPicker.svelte';
   import LowStock from '../lib/LowStock.svelte';
   import SpoolSheet from '../lib/SpoolSheet.svelte';
   import Icon from '../lib/ui/Icon.svelte';
@@ -10,7 +11,7 @@
   import { fmtG1, fmtIso, fmtTs } from '../lib/util.js';
   import { onMount } from 'svelte';
 
-  let open = $state(null);
+  let open = $state(null), picking = $state(null);
   let recent = $state(null);
   const st = $derived(app.status);
   onMount(async () => {
@@ -58,7 +59,7 @@
     {#if st.pending}<div class="alert warn"><Icon name="warn" size={18} /> {st.pending} fratrækning(er) venter på dig. <a href="#/history">Se historik</a></div>{/if}
   {/if}
 
-  <PrinterView />
+  <PrinterView onslot={(k) => (picking = k)} />
   {#if ft?.live_camera && ft.camera_entity}<CameraFeed />{/if}
 
   {#if plug?.enabled}
@@ -120,6 +121,7 @@
 </div>
 
 {#if open}<SpoolSheet id={open} onclose={() => (open = null)} />{/if}
+{#if picking}<SlotPicker slotKey={picking} onclose={() => (picking = null)} />{/if}
 
 <style>
   .head { margin-bottom: 10px; align-items: baseline; }

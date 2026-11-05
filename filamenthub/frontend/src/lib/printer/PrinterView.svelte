@@ -8,7 +8,7 @@
   import { live, useLive } from './live.svelte.js';
   import { fmtRemaining, fmtEta, temp, SPEEDS, hex, STATE_TONE, printerFamily, humidityText } from './format.js';
 
-  let { compact = false } = $props();
+  let { compact = false, onslot = null } = $props();   // onslot(key): a tag on the drawing was tapped (pick a spool)
 
   let still = $state(false);
   onMount(() => {
@@ -100,9 +100,9 @@
         layer={busy ? p?.layer || 0 : 0} totalLayers={busy ? p?.total_layers || 0 : 0} percent={busy ? pct : null} />
     {/snippet}
     {#if family === 'h2'}
-      <PrinterSvg printer={p} {slots} {tone} progress={shownProgress} {still}>{@render canvas()}</PrinterSvg>
+      <PrinterSvg printer={p} {slots} {tone} progress={shownProgress} {still} {onslot}>{@render canvas()}</PrinterSvg>
     {:else}
-      <PrinterSvgGeneric printer={p} {slots} {tone} progress={shownProgress} {still} {family} amsModel={unit0?.model || ''}>{@render canvas()}</PrinterSvgGeneric>
+      <PrinterSvgGeneric printer={p} {slots} {tone} progress={shownProgress} {still} {family} amsModel={unit0?.model || ''} {onslot}>{@render canvas()}</PrinterSvgGeneric>
     {/if}
     {#if live.status !== 'live' && !p}
       <div class="banner muted">{live.status === 'unauthorized' ? 'Log ind for at se printeren' : 'Forbinder til printeren …'}</div>

@@ -8,7 +8,8 @@
   import { onMount } from 'svelte';
   import { hex, luminance } from './format.js';
 
-  let { printer = null, slots = [], tone = 'idle', progress = 0, still = false, children, family = 'x1p1', amsModel = '' } = $props();
+  import SlotHotspots from './SlotHotspots.svelte';
+  let { printer = null, slots = [], tone = 'idle', progress = 0, still = false, children, family = 'x1p1', amsModel = '', onslot = null } = $props();
 
   const VX = 70, VY = 10, VW = 690, VH = 760;
   const BAYS = [188, 279, 371, 462];
@@ -331,10 +332,12 @@
       <text x="494" y="513.5" text-anchor="middle" font-size="6" font-weight="700" fill="#3a3e45" class="logo">Bambu Lab</text>
     {/if}
   </svg>
+  <SlotHotspots view={[VX, VY, VW, VH]} {bays} {ext} {onslot} bayY={84}
+    extAt={hasAms ? { x: EXT.x, y: EXT.y + EXT.r + 8 } : { x: TOP.x, y: TOP.y + TOP.r + 10 }} />
 </div>
 
 <style>
-  .stage { position: relative; width: 100%; max-width: calc(min(80vh, 920px) * 690 / 760); margin-inline: auto; aspect-ratio: 690 / 760; user-select: none; }
+  .stage { position: relative; width: 100%; max-width: calc(min(80vh, 920px) * 690 / 760); margin-inline: auto; aspect-ratio: 690 / 760; user-select: none; container-type: inline-size; }
   .layer { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .front { pointer-events: none; }
   .plate { position: absolute; overflow: hidden; border-radius: 6px; }

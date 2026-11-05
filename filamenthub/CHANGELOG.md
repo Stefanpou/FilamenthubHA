@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.12
+
+- Printerbilledet på forsiden viser nu, hvilket filament der sidder i hvert AMS-slot og på den eksterne holder. Tryk på et mærke for at vælge eller skifte rulle.
+- The printer picture on the dashboard now shows which filament sits in each AMS slot and on the external holder; tap a tag to pick or change the spool.
+
 ## 0.3.11
 
 - "Nulstil forbrug" er igen et lille link efter "% tilbage".
