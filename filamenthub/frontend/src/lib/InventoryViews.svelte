@@ -17,6 +17,7 @@
   // ---- table: own column sort on top of the page's filtered/sorted list
   let tkey = $state(''), tdir = $state(1);
   const COLS = [
+    ['id', '#', (s) => s.id],
     ['material', 'Materiale', (s) => label(s)],
     ['vendor', 'Mærke', (s) => s.vendor || ''],
     ['name', 'Navn', (s) => s.name || ''],
@@ -76,11 +77,12 @@
   <div class="tblwrap glass">
     <table>
       <thead><tr>
-        {#each COLS as [k, t]}<th class:num={k === 'remaining' || k === 'pct' || k === 'price'}><button onclick={() => sortBy(k)} class:on={tkey === k}>{t}{#if tkey === k}<span class="arr">{tdir > 0 ? '▲' : '▼'}</span>{/if}</button></th>{/each}
+        {#each COLS as [k, t]}<th class:num={k === 'id' || k === 'remaining' || k === 'pct' || k === 'price'}><button onclick={() => sortBy(k)} class:on={tkey === k}>{t}{#if tkey === k}<span class="arr">{tdir > 0 ? '▲' : '▼'}</span>{/if}</button></th>{/each}
       </tr></thead>
       <tbody>
         {#each rows as s (s.id)}
           <tr onclick={() => onopen(s.id)} class:arch={s.archived}>
+            <td class="num mono">{s.id}</td>
             <td><i class="dot" style="--c:{fill(s)}"></i>{label(s)}</td>
             <td>{s.vendor || '–'}</td>
             <td class="ellipsis nmc">{s.name || '–'}</td>

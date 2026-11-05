@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.5
+
+- Lageret kan sorteres på rullenummer (laveste eller højeste først), og tabellen har en kolonne med rullenummeret.
+- Inventory can be sorted by spool number (lowest or highest first), and the table has a spool number column.
+
 ## 0.3.4
 
 - AMS-slots og rullerne i dem vises igen efter en genstart, også mens printeren er slukket eller sover. Du kan vælge ruller til slots som før.

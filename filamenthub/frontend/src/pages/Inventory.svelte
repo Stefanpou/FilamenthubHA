@@ -63,6 +63,7 @@
       most: (a, b) => b.remaining - a.remaining,
       least: (a, b) => pctOf(a) - pctOf(b),
       newest: (a, b) => b.id - a.id,
+      idAsc: (a, b) => a.id - b.id,
       used: (a, b) => String(b.last_used || '').localeCompare(String(a.last_used || '')),
       dried: (a, b) => String(b.dried || '').localeCompare(String(a.dried || '')),
       driedOld: (a, b) => last(a.dried, b.dried) ?? a.dried.localeCompare(b.dried),
@@ -116,7 +117,7 @@
           <button class="chip" class:on={unweighed} onclick={() => (unweighed = !unweighed)}>Aldrig vejet</button>
           <button class="chip" class:on={archived} onclick={() => (archived = !archived)}>Arkiverede</button>
           <label class="f grow" style="min-width:150px"><select class="input" bind:value={sort} aria-label="Sortér">
-            <option value="name">Sortér: Materiale / navn</option><option value="most">Mest tilbage</option><option value="least">Mindst tilbage</option><option value="newest">Nyeste først</option><option value="used">Sidst brugt</option><option value="dried">Senest tørret</option><option value="driedOld">Længst siden tørret</option><option value="weighedOld">Længst siden vejet</option><option value="priceHigh">Dyreste (kr/kg)</option><option value="priceLow">Billigste (kr/kg)</option></select></label>
+            <option value="name">Sortér: Materiale / navn</option><option value="most">Mest tilbage</option><option value="least">Mindst tilbage</option><option value="idAsc">Rullenummer (laveste først)</option><option value="newest">Rullenummer (højeste først)</option><option value="used">Sidst brugt</option><option value="dried">Senest tørret</option><option value="driedOld">Længst siden tørret</option><option value="weighedOld">Længst siden vejet</option><option value="priceHigh">Dyreste (kr/kg)</option><option value="priceLow">Billigste (kr/kg)</option></select></label>
           <button class="btn small ghost" onclick={reset}>Nulstil</button>
         </div>
       </div>
