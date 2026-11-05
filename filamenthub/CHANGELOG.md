@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.14
+
+- Mellemrum mellem procent og navn på AMS-mærkerne.
+- Space between percentage and name on the AMS tags.
+
 ## 0.3.13
 
 - Printerbilledet viser lågen åben, når printeren melder det (X1, H2D og X2D har en lågesensor).

@@ -39,6 +39,6 @@
   .tag.empty { opacity: .6; border-style: dashed; border-color: #ffffff30; background: #0b0d12cc; }
   .m { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; white-space: nowrap; }
   .m i { width: .8em; height: .8em; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px #ffffff40; flex: none; }
-  .n b { font-weight: 600; }
+  .n b { font-weight: 600; margin-right: .3em; }
   .n { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .8; font-size: .9em; }
 </style>
