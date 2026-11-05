@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.11
+
+- "Nulstil forbrug" er igen et lille link efter "% tilbage".
+- "Reset usage" is a small link after "% left" again.
+
 ## 0.3.10
 
 - "Nulstil forbrug" er nu en tydelig knap under rullens vægt.
