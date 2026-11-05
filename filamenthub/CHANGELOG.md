@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.10
+
+- "Nulstil forbrug" er nu en tydelig knap under rullens vægt.
+- "Reset usage" is now a clear button below the spool's weight.
+
 ## 0.3.9
 
 - Nyt: faste placeringer med et antal pladser (Indstillinger > Placeringer). På en rulle vælger du stedet og en ledig plads, eller lader den tage den første ledige. Lageret kan filtreres og grupperes efter placering.

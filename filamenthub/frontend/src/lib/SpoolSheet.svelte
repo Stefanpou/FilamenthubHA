@@ -129,8 +129,8 @@
     <Spool color={s.color} colors={s.colors} pct={pctOf(s)} size={150} tilt />
     <div class="stats">
       <div class="big mono">{fmtG1(s.remaining)}</div>
-      <div class="muted small">af {fmtG(s.initial)} · {Math.round(pctOf(s) * 100)} % tilbage
-        {#if s.remaining > 0 && s.remaining < s.initial}<button class="linkbtn" onclick={() => (confirm = 'reset')} disabled={busy}>Nulstil forbrug</button>{/if}</div>
+      <div class="muted small">af {fmtG(s.initial)} · {Math.round(pctOf(s) * 100)} % tilbage</div>
+      {#if s.remaining > 0 && s.remaining < s.initial}<button class="btn small" style="margin-top:8px" onclick={() => (confirm = 'reset')} disabled={busy}><Icon name="refresh" size={14} /> Nulstil forbrug til 100 %</button>{/if}
       <div class="row wrap" style="margin-top:10px; gap:6px">
         <span class="badge">#{s.id}</span><span class="badge accent">{s.material}</span>
         {#if s.archived}<span class="badge warn">Arkiveret</span>{/if}
