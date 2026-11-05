@@ -98,6 +98,9 @@ class Engine:
         self._slot_settings: dict[str, tuple] = {k: tuple(v) for k, v in (memory.get("settings") or {}).items()}
         self._slot_present: dict[str, bool] = dict(memory.get("present") or {})
         self._slot_memory_saved = memory
+        # The AMS/holder part of the last full report, kept across restarts: after a restart the printer (off or
+        # asleep) may not answer for hours, and the slots should still show what is loaded meanwhile.
+        self._last_trays: dict = db.get("last_trays", {}) or trays_from_memory(memory)
         # Slots we already sent a "which spool?" notification for, and when to ask for others (after the RFID
         # read grace). Kept across restarts too, so a question due during a restart is not lost.
         self._asked: set[str] = set(memory.get("asked") or [])
@@ -231,6 +234,7 @@ class Engine:
             if not self.state:
                 return
             now = time.time()
+            self._remember_trays(now)
             for key in active_slots(self.state):
                 self._active_ts[key] = now
             self._track_print(raw)
@@ -346,6 +350,25 @@ class Engine:
     def current_slots(self) -> list[SlotInfo]:
         with self.lock:
             return parse_slots(self.state, self.modules) if self.state else []
+
+    def _remember_trays(self, now: float) -> None:
+        units = (self.state.get("ams") or {}).get("ams")
+        if not units:
+            return
+        trays = {"ams": {"ams": units}, "vir_slot": self.state.get("vir_slot"), "vt_tray": self.state.get("vt_tray")}
+        if trays != {k: v for k, v in self._last_trays.items() if k != "ts"} or now - self._last_trays.get("ts", 0) > 3600:
+            self._last_trays = {**trays, "ts": now}
+            self.db.set("last_trays", self._last_trays)
+
+    def display_slots(self) -> tuple[list[SlotInfo], dict | None]:
+        """The slots to show: live ones, else the last known ones while the printer has not sent its AMS since the
+        service started ({"ts": when they were reported, if known}). Never used for decisions."""
+        with self.lock:
+            live = self.current_slots()
+            if live or not self._last_trays.get("ams"):
+                return live, None
+            known = parse_slots({k: v for k, v in self._last_trays.items() if k != "ts"}, self.modules)
+            return known, {"ts": self._last_trays.get("ts")}
 
     def _evaluate_slots(self, force: bool = False) -> None:
         slots = parse_slots(self.state, self.modules)
@@ -1821,7 +1844,7 @@ class Engine:
         auth = self.auth
         with self.lock:
             summary = print_summary(self.state) if self.state else None
-            slots = self.current_slots()
+            slots, slots_from = self.display_slots()
         return {
             "bambu": {
                 "logged_in": bool(auth),
@@ -1837,10 +1860,33 @@ class Engine:
             "device": self.device,
             "print": summary,
             "slots": [s.to_dict() for s in slots],
+            "slots_stale": slots_from,   # set: the printer has not reported its AMS yet, these are the last known
             "assignments": self.db.current_assignments(),
             "pending": self.db.query_one(
                 "SELECT COUNT(*) c FROM deductions WHERE state IN ('pending','uncertain')")["c"],
         }
+
+
+def trays_from_memory(memory: dict) -> dict:
+    """A minimal AMS/holder report rebuilt from the stored slot memory (material, colour, present per slot), for
+    installs that have not stored a full one yet."""
+    settings, present = memory.get("settings") or {}, memory.get("present") or {}
+    units: dict[int, list] = {}
+    ext = []
+    for key in sorted(set(settings) | set(present)):
+        mat, col = (list(settings.get(key) or []) + ["", ""])[:2]
+        tray = {"tray_type": mat if present.get(key) else "", "tray_color": (col + "FF") if col and present.get(key) else ""}
+        parts = key.split(":")
+        try:
+            if parts[0] == "ams" and len(parts) == 3:
+                units.setdefault(int(parts[1]), []).append({"id": parts[2], "state": 1 if present.get(key) else 0, **tray})
+            elif parts[0] == "ext" and len(parts) == 2:
+                ext.append({"id": parts[1], **tray})
+        except ValueError:
+            continue
+    if not units:
+        return {}
+    return {"ams": {"ams": [{"id": str(u), "tray": t} for u, t in sorted(units.items())]}, "vir_slot": ext, "ts": None}
 
 
 # ---------------------------------------------------------------------------- notify

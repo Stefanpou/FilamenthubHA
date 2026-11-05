@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.4
+
+- AMS-slots og rullerne i dem vises igen efter en genstart, også mens printeren er slukket eller sover. Du kan vælge ruller til slots som før.
+- AMS slots and their spools show again after a restart, also while the printer is off or asleep, and spools can be picked for them.
+
 ## 0.3.3
 
 - Ruller med flere farver (fx trefarvet silke) vises med alle farverne i listen, tabellen og på farvevæggen.

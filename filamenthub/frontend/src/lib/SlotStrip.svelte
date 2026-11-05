@@ -12,6 +12,8 @@
   let busyKey = $state('');
 
   const slots = $derived(app.status?.slots || []);
+  const stale = $derived(app.status?.slots_stale);
+  const when = (ts) => new Date(ts * 1000).toLocaleString('da-DK', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const byId = $derived(Object.fromEntries((app.spools || []).map((s) => [s.id, s])));
   const groups = $derived.by(() => {
     const g = {};
@@ -38,6 +40,9 @@
   {/if}
 {:else}
   <div class="groups" class:compact>
+    {#if stale && !compact}
+      <p class="muted small stale">Printeren har ikke sendt AMS-status endnu{stale.ts ? ` – viser hvad der sad ${when(stale.ts)}` : ' – viser hvad der sidst sad i slottene'}. Du kan stadig vælge ruller.</p>
+    {/if}
     {#each groups as g, gi}
       <section class="rise" style="--i:{gi}">
         <div class="eyebrow" style="margin: 0 4px 8px">{g.title}</div>
@@ -110,6 +115,7 @@
 
 <style>
   .use { color: var(--accent); }
+  .stale { margin: 0 4px; }
   .groups { display: flex; flex-direction: column; gap: 20px; }
   .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
   .compact .slots { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
