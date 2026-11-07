@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.15
+
+- Ny profildatabase under Bibliotek → Filamentprofiler: søg i over 1.600 filamentprofiler (Bambu Lab, Polymaker, Elegoo, SUNLU, eSUN, Generic m.fl.), filtrér på materiale og producent, justér temperaturer og flow, og send profilen til Bambu Studio som fil eller direkte til din Bambu Cloud. Dine egne profiler i Bambu Cloud kan ses og slettes samme sted.
+- New profile database under Library → Filament profiles: search 1,600+ filament profiles, filter by material and vendor, adjust temperatures and flow, and send the profile to Bambu Studio as a file or straight to your Bambu Cloud. Your own cloud presets can be listed and deleted there too.
+
 ## 0.3.14
 
 - Mellemrum mellem procent og navn på AMS-mærkerne.

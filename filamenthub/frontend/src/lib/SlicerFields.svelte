@@ -1,7 +1,7 @@
 <!-- Slicer settings for a filament: pick a profile (vendor's own or Generic) and adjust the main values.
      `choice` = {profile, settings}; settings start as the profile's and hold any edits. -->
 <script>
-  let { candidates = [], choice = $bindable(null), compact = false } = $props();
+  let { candidates = [], choice = $bindable(null), compact = false, picker = true } = $props();
 
   const EDIT = [
     ['supertack_plate_temp', 'Cool Plate SuperTack °C'],
@@ -40,12 +40,12 @@
 </script>
 
 <div class="stack" style="gap:10px">
-  <label class="f">Slicer-profil
+  {#if picker}<label class="f">Slicer-profil
     <select class="input" value={choice?.profile || ''} onchange={(e) => pick(e.currentTarget.value)}>
       <option value="">– ingen –</option>
       {#each candidates as c}<option value={c.profile}>{label(c)}</option>{/each}
       {#if choice?.profile && !prof}<option value={choice.profile}>{choice.profile}</option>{/if}
-    </select></label>
+    </select></label>{/if}
   {#if choice?.settings}
     <div class="grid">
       {#each EDIT as [k, l]}

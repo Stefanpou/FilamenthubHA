@@ -108,6 +108,47 @@ def summary(p: dict) -> dict:
     return {"profile": p["n"], "vendor": p["v"], "type": p["t"], "model": p["m"], "settings": dict(p["s"])}
 
 
+def builtin(p: dict, model: str) -> bool:
+    """Bambu's own system preset for this printer: Bambu Studio already has it."""
+    return p["m"] == model and p["id"].startswith("GF") and p["v"].lower() in ("bambu lab", "generic")
+
+
+def for_printer(model: str, all_printers: bool = False) -> list[dict]:
+    """The profiles that make sense on this printer: its own (`@BBL <model>`) and the vendors' generic ones
+    (`@System`), minus a generic one when the vendor has the same line for this printer."""
+    ps = profiles()
+    if all_printers or not model:
+        return list(ps)
+    own = {(p["v"].lower(), p["b"].lower()) for p in ps if p["m"] == model}
+    return [p for p in ps if p["m"] == model or (p["m"] == "" and (p["v"].lower(), p["b"].lower()) not in own)]
+
+
+def search(model: str, q: str = "", vendor: str = "", material: str = "", all_printers: bool = False) -> tuple[list[dict], list[dict]]:
+    """(hits, pool): the profiles matching every word of `q` (in vendor, name, material and printer) and the
+    vendor/material filters, sorted by vendor and name; pool is the printer's set the facets count over."""
+    pool = for_printer(model, all_printers)
+    words = [w for w in re.findall(r"[a-z0-9]+(?:\.[0-9]+)?", q.lower())]
+    hits = []
+    for p in pool:
+        if vendor and p["v"].lower() != vendor.lower():
+            continue
+        if material and (p["t"] or "").upper() != material.upper():
+            continue
+        hay = f"{p['v']} {p['n']} {p['t']}".lower()
+        if all(w in hay or w in _norm(hay) for w in words):
+            hits.append(p)
+    hits.sort(key=lambda p: (p["v"].lower() != "bambu lab", p["v"].lower(), p["b"].lower(), p["m"], p["n"]))
+    return hits, pool
+
+
+def default_name(p: dict, model: str, nozzle: str = "0.4") -> str:
+    """A name for the user preset: "<vendor> <line> @<printer>" (the vendor once, also when the line has it)."""
+    line = p["b"]
+    if not _same_vendor(line.split(" ", 1)[0], p["v"]) and p["v"].lower() != "generic":
+        line = f"{p['v']} {line}"
+    return f"{' '.join(line.split())} @{machine_name(model, nozzle)}"
+
+
 def base_for(p: dict, model: str) -> dict | None:
     """Bambu's system preset a user preset for `p` inherits from on this printer."""
     if p["m"] == model and p["id"].startswith("GF"):

@@ -2,6 +2,7 @@
 <script>
   import Sheet from '../lib/ui/Sheet.svelte';
   import Icon from '../lib/ui/Icon.svelte';
+  import LibraryTabs from '../lib/LibraryTabs.svelte';
   import { go, toast, toastErr } from '../lib/stores.svelte.js';
   import { api, post, del } from '../lib/api.js';
   import { fmtG1, fmtTs, hex, debounce, nf1, nf2 } from '../lib/util.js';
@@ -58,6 +59,7 @@
 
 <div class="page stack" style="gap:16px">
   <h1>Printbibliotek</h1>
+  <LibraryTabs />
   <div class="search"><span class="ico"><Icon name="search" size={18} /></span>
     <input class="input" type="search" placeholder="Søg i prints …" bind:value={q} oninput={search}></div>
 

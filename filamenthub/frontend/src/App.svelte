@@ -5,6 +5,7 @@
   import History from './pages/History.svelte';
   import Settings from './pages/Settings.svelte';
   import Library from './pages/Library.svelte';
+  import Profiles from './pages/Profiles.svelte';
   import Calculator from './pages/Calculator.svelte';
   import Login from './pages/Login.svelte';
   import Kiosk from './pages/Kiosk.svelte';
@@ -25,7 +26,7 @@
     { path: '/calc', label: 'Pris', icon: 'calc' },
     { path: '/settings', label: 'Indstillinger', icon: 'gear' },
   ];
-  const PAGES = { '/': Dashboard, '/inventory': Inventory, '/add': AddSpool, '/history': History, '/settings': Settings, '/calc': Calculator, '/library': Library, '/setup': Setup };
+  const PAGES = { '/': Dashboard, '/inventory': Inventory, '/add': AddSpool, '/history': History, '/settings': Settings, '/calc': Calculator, '/library': Library, '/library/profiles': Profiles, '/setup': Setup };
   const Page = $derived(PAGES[route.path] || Dashboard);
 
   onMount(() => { initRouter(); if (!kiosk) loadAuth(); });
@@ -33,7 +34,7 @@
     if (kiosk) return;
     if (auth.authenticated) { startPolling(); return () => stopPolling(); }
   });
-  $effect(() => { document.title = kiosk ? 'FilamentHub' : `${(route.path === '/library' ? 'Printbibliotek' : route.path === '/setup' ? 'Opsætning' : NAV.find((n) => n.path === route.path)?.label) || 'FilamentHub'} · FilamentHub`; });
+  $effect(() => { document.title = kiosk ? 'FilamentHub' : `${(route.path === '/library' ? 'Printbibliotek' : route.path === '/library/profiles' ? 'Filamentprofiler' : route.path === '/setup' ? 'Opsætning' : NAV.find((n) => n.path === route.path)?.label) || 'FilamentHub'} · FilamentHub`; });
   let setupChecked = false;
   $effect(() => {
     if (kiosk || !auth.authenticated || setupChecked) return;
