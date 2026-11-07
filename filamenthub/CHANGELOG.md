@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.16
+
+- Printerindstillinger har nu også ironing-hastighed, ironing-flow, flow ratio for første lag og for topfladen. Bambu Studio har dem i procesprofilen, så FilamentHub laver en procesprofil pr. filament (fx »0.20mm Standard @BBL X2D - Elegoo PETG RAPID«), der arver fra Bambus egen og kun ændrer de fire værdier. Den sendes til Bambu Cloud eller hentes som fil sammen med filamentprofilen.
+- Gemmer du indstillinger på et filament, får alle filamenter af samme type og farve dem også.
+- Værdier, du har ændret manuelt, er markeret med en prik og profilens oprindelige værdi (tryk for at gå tilbage), og rullen viser »Ændret manuelt«.
+- Findes profilen allerede i Bambu Cloud, kan den nu erstattes med de nye værdier.
+- Printer settings now include ironing speed, ironing flow, first layer and top surface flow ratio, sent as a per-filament process preset next to the filament preset. Saving updates every filament of the same type and colour, values changed by hand are marked, and existing cloud presets can be replaced.
+
 ## 0.3.15
 
 - Ny profildatabase under Bibliotek → Filamentprofiler: søg i over 1.600 filamentprofiler (Bambu Lab, Polymaker, Elegoo, SUNLU, eSUN, Generic m.fl.), filtrér på materiale og producent, justér temperaturer og flow, og send profilen til Bambu Studio som fil eller direkte til din Bambu Cloud. Dine egne profiler i Bambu Cloud kan ses og slettes samme sted.

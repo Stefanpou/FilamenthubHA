@@ -16,6 +16,7 @@
   let res = $state(null), items = $state([]), loading = $state(false);
   let cloud = $state(null), cloudErr = $state(''), showCloud = $state(false);
   let sel = $state(null), choice = $state(null), name = $state(''), busy = $state(false), gone = $state(null);
+  let processes = $state([]), defProcess = '', proc = $state(null), procName = $state('');
 
   async function load(more = false) {
     loading = true;
@@ -31,9 +32,12 @@
   async function loadCloud() {
     try { cloud = (await api('api/slicer/cloud')).items; cloudErr = ''; } catch (e) { cloud = []; cloudErr = e.message; }
   }
-  onMount(() => { load(); loadCloud(); });
+  onMount(() => {
+    load(); loadCloud();
+    api('api/slicer/processes').then((r) => { processes = r.items; defProcess = r.default; }).catch(() => {});
+  });
 
-  const inCloud = $derived(new Set((cloud || []).map((p) => (p.name || '').toLowerCase())));
+  const inCloud = $derived(new Set((cloud || []).filter((p) => p.kind !== 'print').map((p) => (p.name || '').toLowerCase())));
   const mats = $derived((res?.materials || []).slice(0, 8));
   const short = (p) => p.profile.replace(/ @System$/, '').replace(/ @BBL (\w+)( 0\.4 nozzle)?$/, '');
   const temp = (s, k) => (s?.[k] && s[k] !== '0' ? `${s[k]} °C` : '–');
@@ -42,25 +46,47 @@
     sel = p;
     choice = { profile: p.profile, settings: { ...p.settings } };
     name = p.preset_name;
+    const d = processes.find((x) => x.name === defProcess);
+    proc = d ? { base: d.name, settings: { ...d.defaults } } : null;
+    procName = d ? `${d.name} - ${p.preset_name.split(' @')[0]}` : '';
+    lastBase = d?.name || '';
   }
+  let lastBase = '';
+  $effect(() => {
+    const b = proc?.base || '';
+    if (lastBase && b && b !== lastBase && procName.startsWith(lastBase)) procName = b + procName.slice(lastBase.length);
+    lastBase = b;
+  });
+  const pnum = (v) => Number(String(v ?? '').replace(',', '.').replace('%', '').trim());
+  const procOwn = $derived(!!proc && Object.entries(proc.settings).some(([k, v]) => {
+    const d = processes.find((x) => x.name === proc.base)?.defaults?.[k];
+    return d != null && String(v ?? '').trim() !== '' && pnum(v) !== pnum(d);
+  }));
   const edits = () => Object.fromEntries(Object.entries(choice?.settings || {}).filter(([, v]) => v != null && v !== ''));
-  const body = () => ({ profile: sel.profile, name: name.trim(), settings: edits() });
+  const body = () => ({ profile: sel.profile, name: name.trim(), settings: edits(), process: procOwn ? proc : null, process_name: procName.trim() || null });
 
   async function run(fn) {
     busy = true;
     try { await fn(); } catch (e) { toastErr(e); } finally { busy = false; }
   }
-  const download = () => run(async () => {
-    const data = await post('api/slicer/profiles/preset.json', body());
+  function save(data, fname) {
     const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 4)], { type: 'application/json' }));
     const a = document.createElement('a');
-    a.href = url; a.download = `${name.trim().replace(/[^A-Za-z0-9 ._@-]+/g, '') || 'filament'}.json`;
+    a.href = url; a.download = `${fname.trim().replace(/[^A-Za-z0-9 ._@-]+/g, '') || 'filament'}.json`;
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  const download = () => run(async () => {
+    save(await post('api/slicer/profiles/preset.json', body()), name);
+    if (procOwn) save(await post('api/slicer/profiles/process.json', body()), procName);
   });
   const toCloud = () => run(async () => {
-    await post('api/slicer/profiles/cloud', body());
-    toast('Sendt til Bambu Cloud – Bambu Studio henter den ved næste synkronisering');
+    let r;
+    try { r = await post('api/slicer/profiles/cloud', body()); } catch (e) {
+      if (e.status !== 409 || !window.confirm(`${e.message}.\n\nErstat den med de nye værdier?`)) throw e;
+      r = await post('api/slicer/profiles/cloud', { ...body(), replace: true });
+    }
+    toast(`${r.replaced ? 'Erstattet' : 'Sendt'} i Bambu Cloud${r.process ? ' – filament- og procesprofil' : ''}. Bambu Studio henter ${r.process ? 'dem' : 'den'} ved næste synkronisering`);
     sel = null;
     loadCloud();
   });
@@ -103,7 +129,7 @@
       {#if showCloud}
         {#if cloudErr}<p class="small muted">{cloudErr}</p>{/if}
         {#each cloud || [] as p (p.setting_id)}
-          <div class="row cl"><span class="grow ellipsis small">{p.name}</span>
+          <div class="row cl"><span class="grow ellipsis small">{p.name}</span><span class="tiny muted">{p.kind === 'print' ? 'proces' : 'filament'}</span>
             <button class="btn small ghost" onclick={() => (gone = p)} disabled={busy} aria-label="Slet {p.name}"><Icon name="trash" size={16} /></button></div>
         {/each}
         <p class="tiny muted">Det er dine egne profiler, som Bambu Studio viser under brugerprofiler.</p>
@@ -146,15 +172,16 @@
     <div class="stack">
       <div class="small muted">{sel.vendor} · {sel.type}{sel.model ? ` · lavet til ${sel.model}` : ' · generisk profil'}</div>
       {#if sel.builtin}<p class="tiny muted">Denne profil er indbygget i Bambu Studio. Send den kun, hvis du har ændret noget.</p>{/if}
-      <SlicerFields candidates={[sel]} bind:choice picker={false} />
+      <SlicerFields candidates={[sel]} bind:choice picker={false} bind:process={proc} {processes} />
       <label class="f">Profilnavn i Bambu Studio<input class="input" bind:value={name} maxlength="200"></label>
-      {#if inCloud.has(name.trim().toLowerCase())}<p class="tiny warn">Der findes allerede en profil med det navn i Bambu Cloud – giv den et andet navn.</p>{/if}
+      {#if procOwn}<label class="f">Procesprofil i Bambu Studio<input class="input" bind:value={procName} maxlength="200"></label>{/if}
+      {#if inCloud.has(name.trim().toLowerCase())}<p class="tiny warn">Der findes allerede en profil med det navn i Bambu Cloud – sender du, bliver du spurgt, om den skal erstattes.</p>{/if}
       {#if !res?.machine}<p class="tiny warn">Log ind på Bambu Cloud under Indstillinger, så FilamentHub kender din printer.</p>{/if}
       <p class="tiny muted">Profilen arver fra Bambus egen {res?.machine}-profil og ændrer kun det, der står her. Filen importeres i Bambu Studio under Filer → Importér → Importér konfigurationer.</p>
     </div>
     {#snippet footer()}
       <button class="btn grow" onclick={download} disabled={busy || !name.trim()}><Icon name="download" size={16} /> Download</button>
-      <button class="btn primary grow" onclick={toCloud} disabled={busy || !name.trim() || inCloud.has(name.trim().toLowerCase())}><Icon name="upload" size={16} /> Til Bambu Cloud</button>
+      <button class="btn primary grow" onclick={toCloud} disabled={busy || !name.trim()}><Icon name="upload" size={16} /> Til Bambu Cloud</button>
     {/snippet}
   </Sheet>
 {/if}

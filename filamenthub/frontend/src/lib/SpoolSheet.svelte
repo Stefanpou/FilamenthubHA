@@ -25,36 +25,66 @@
   $effect(() => { loadUsage(); });
   $effect(() => { loadSlicer(id); });
 
-  // Slicer settings (saved on the filament, else the best matching profile) -> Bambu Studio file / Bambu Cloud
-  let sl = $state(null), slChoice = $state(null), presetName = $state(''), slBusy = $state(false);
+  // Slicer settings (saved on the filament, else the best matching profile) -> Bambu Studio file / Bambu Cloud.
+  // The process values (ironing, first layer and top surface flow) become a second preset when they differ from Bambu's.
+  let sl = $state(null), slChoice = $state(null), slProc = $state(null), processes = $state([]);
+  let presetName = $state(''), processName = $state(''), slBusy = $state(false);
   async function loadSlicer(sid) {
     try {
       sl = await api(`api/spools/${sid}/slicer`);
-      slChoice = sl.current ? { profile: sl.current.profile, settings: { ...sl.current.settings } } : null;
+      seedSlicer();
       presetName = sl.preset_name;
+      processName = sl.process_name;
+      if (sl.process && !processes.length) processes = (await api('api/slicer/processes')).items;
     } catch { sl = null; }
   }
+  function seedSlicer() {
+    slChoice = sl.current ? { profile: sl.current.profile, settings: { ...sl.current.settings } } : null;
+    slProc = sl.process ? { base: sl.process.base, settings: { ...sl.process.settings } } : null;
+  }
+  const procChanged = $derived(!!slProc && (slProc.base !== sl?.process?.base
+    || JSON.stringify(slProc.settings) !== JSON.stringify(sl?.process?.settings)));
+  const pnum = (v) => Number(String(v ?? '').replace(',', '.').replace('%', '').trim());
+  const procOwn = $derived(!!slProc && Object.entries(slProc.settings).some(([k, v]) => {
+    const d = processes.find((p) => p.name === slProc.base)?.defaults?.[k];
+    return d != null && String(v ?? '').trim() !== '' && pnum(v) !== pnum(d);
+  }));
   const slDirty = $derived(!!slChoice && (!sl?.current?.saved || sl.current.profile !== slChoice.profile
-    || JSON.stringify(sl.current.settings) !== JSON.stringify(slChoice.settings)));
+    || JSON.stringify(sl.current.settings) !== JSON.stringify(slChoice.settings) || procChanged));
+  // a new base preset gives a new process preset name, unless it was typed by hand
+  let lastBase = '';
+  $effect(() => {
+    const b = slProc?.base || '';
+    if (lastBase && b && b !== lastBase && processName.startsWith(lastBase)) processName = b + processName.slice(lastBase.length);
+    lastBase = b;
+  });
   async function saveSlicer(quiet) {
     if (!slChoice?.profile) return;
-    sl = await api(`api/spools/${id}/slicer`, { method: 'PUT', body: slChoice });
-    slChoice = { profile: sl.current.profile, settings: { ...sl.current.settings } };
-    if (!quiet) toast('Printerindstillinger gemt på filamentet');
+    sl = await api(`api/spools/${id}/slicer`, { method: 'PUT', body: { ...slChoice, process: slProc } });
+    seedSlicer();
+    if (!quiet) toast(sl.updated > 1 ? `Printerindstillinger gemt på ${sl.updated} filamenter af samme type og farve` : 'Printerindstillinger gemt på filamentet');
   }
   async function slRun(fn) {
     slBusy = true;
     try { if (slDirty) await saveSlicer(true); await fn(); } catch (e) { toastErr(e); } finally { slBusy = false; }
   }
-  const download = () => slRun(async () => {
+  function fetchFile(href, name) {
     const a = document.createElement('a');
-    a.href = `api/spools/${id}/slicer/preset.json?${new URLSearchParams({ name: presetName })}`;
-    a.download = `${presetName}.json`;
+    a.href = href; a.download = `${name}.json`;
     document.body.append(a); a.click(); a.remove();
+  }
+  const download = () => slRun(async () => {
+    fetchFile(`api/spools/${id}/slicer/preset.json?${new URLSearchParams({ name: presetName })}`, presetName);
+    if (procOwn) setTimeout(() => fetchFile(`api/spools/${id}/slicer/process.json?${new URLSearchParams({ name: processName })}`, processName), 400);
   });
   const toCloud = () => slRun(async () => {
-    await post(`api/spools/${id}/slicer/cloud`, { name: presetName });
-    toast('Sendt til Bambu Cloud – Bambu Studio henter den ved næste synkronisering');
+    const body = { name: presetName, process_name: processName };
+    let r;
+    try { r = await post(`api/spools/${id}/slicer/cloud`, body); } catch (e) {
+      if (e.status !== 409 || !window.confirm(`${e.message}.\n\nErstat den med de nye værdier?`)) throw e;
+      r = await post(`api/spools/${id}/slicer/cloud`, { ...body, replace: true });
+    }
+    toast(`${r.replaced ? 'Erstattet' : 'Sendt'} i Bambu Cloud${r.process ? ' – filament- og procesprofil' : ''}. Bambu Studio henter ${r.process ? 'dem' : 'den'} ved næste synkronisering`);
   });
 
   async function loadUsage() {
@@ -213,20 +243,24 @@
 
     <section class="glass pad stack">
       <div class="row between"><div class="eyebrow">Printerindstillinger</div>
-        {#if sl?.machine}<span class="tiny muted">{sl.machine}</span>{/if}</div>
+        {#if sl?.manual?.length}<span class="badge warn" title="Ændret manuelt{sl.edited_at ? ' ' + fmtTs(sl.edited_at) : ''}">Ændret manuelt</span>
+        {:else if sl?.machine}<span class="tiny muted">{sl.machine}</span>{/if}</div>
       {#if sl === null}<div class="skeleton" style="height:40px"></div>
       {:else if !sl.candidates.length && !sl.current}<p class="small muted">Ingen slicer-profil fundet til {s.material}.</p>
       {:else}
         {#if sl.current && !sl.current.saved}<p class="tiny muted">Forslag ud fra producent og materiale – gem for at knytte det til filamentet.</p>{/if}
-        <SlicerFields candidates={sl.candidates} bind:choice={slChoice} />
+        <SlicerFields candidates={sl.candidates} bind:choice={slChoice} bind:process={slProc} {processes}
+          defaults={slChoice?.profile === sl.current?.profile ? sl.current?.defaults : null} />
         {#if slChoice?.profile}
-          {#if slDirty}<button class="btn" onclick={() => slRun(() => saveSlicer(false))} disabled={slBusy}>Gem på filamentet</button>{/if}
+          {#if slDirty}<button class="btn" onclick={() => slRun(() => saveSlicer(false))} disabled={slBusy}>Gem på filamentet</button>
+            <p class="tiny muted">Gemmes på alle ruller af {s.name} – og på andre filamenter af samme type og farve.</p>{/if}
           <label class="f">Profilnavn i Bambu Studio<input class="input" bind:value={presetName}></label>
+          {#if procOwn}<label class="f">Procesprofil i Bambu Studio<input class="input" bind:value={processName}></label>{/if}
           <div class="row wrap">
-            <button class="btn grow" onclick={download} disabled={slBusy || !presetName.trim()}><Icon name="download" size={16} /> Download til Bambu Studio</button>
-            <button class="btn primary grow" onclick={toCloud} disabled={slBusy || !presetName.trim()}><Icon name="upload" size={16} /> Send til Bambu Cloud</button>
+            <button class="btn grow" onclick={download} disabled={slBusy || !presetName.trim() || (procOwn && !processName.trim())}><Icon name="download" size={16} /> Download til Bambu Studio</button>
+            <button class="btn primary grow" onclick={toCloud} disabled={slBusy || !presetName.trim() || (procOwn && !processName.trim())}><Icon name="upload" size={16} /> Send til Bambu Cloud</button>
           </div>
-          <p class="tiny muted">Profilen arver fra Bambus egen {sl.machine}-profil og ændrer kun det, der står her. Filen importeres i Bambu Studio under Filer → Importér → Importér konfigurationer.</p>
+          <p class="tiny muted">Profilerne arver fra Bambus egne {sl.machine}-profiler og ændrer kun det, der står her. Filerne importeres i Bambu Studio under Filer → Importér → Importér konfigurationer.</p>
         {/if}
       {/if}
     </section>

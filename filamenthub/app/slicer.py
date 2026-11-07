@@ -217,3 +217,136 @@ def stored(extra_text: str) -> dict | None:
     except ValueError:
         return None
     return val if isinstance(val, dict) and val.get("profile") else None
+
+
+# ---- process (print) settings a filament may change: a user process preset per filament ---------------------------
+# Bambu Studio keeps these in the process preset, not the filament one, so they travel as a second user preset that
+# inherits from one of Bambu's process presets for the printer (data/process_profiles.json.gz, Bambu Studio's own).
+PROCESS_INDEX = Path(__file__).parent / "data" / "process_profiles.json.gz"
+PROCESS_KEYS = ("ironing_speed", "ironing_flow", "initial_layer_flow_ratio", "top_solid_infill_flow_ratio")
+PROCESS_DEFAULTS = {"ironing_speed": "20", "ironing_flow": "10", "initial_layer_flow_ratio": "1",
+                    "top_solid_infill_flow_ratio": "1"}   # Bambu Studio's defaults when a preset leaves them out
+PROCESS_LIMITS = {"ironing_speed": (1, 500), "ironing_flow": (0, 100), "initial_layer_flow_ratio": (0, 2),
+                  "top_solid_infill_flow_ratio": (0, 2)}
+PER_VARIANT_PROCESS = {"top_solid_infill_flow_ratio"}
+
+
+@lru_cache(maxsize=1)
+def process_profiles() -> tuple[dict, ...]:
+    try:
+        with gzip.open(PROCESS_INDEX, "rt", encoding="utf-8") as fh:
+            return tuple(json.load(fh)["profiles"])
+    except (OSError, ValueError, KeyError):
+        return ()
+
+
+def processes_for(model: str) -> list[dict]:
+    return [p for p in process_profiles() if p["m"] == model]
+
+
+def process_by_name(name: str) -> dict | None:
+    return next((p for p in process_profiles() if p["n"] == name), None)
+
+
+def default_process(model: str) -> str:
+    ps = processes_for(model)
+    return next((p["n"] for p in ps if p["n"].startswith("0.20mm Standard")), ps[0]["n"] if ps else "")
+
+
+def _scalar(v) -> str:
+    v = v[0] if isinstance(v, list) and v else v
+    return str(v).rstrip("%") if v not in (None, "") else ""
+
+
+def process_defaults(base: dict) -> dict:
+    """The four values as Bambu's process preset has them ("10%" -> "10", per-variant lists -> the first)."""
+    return {k: _scalar(base["s"].get(k)) or PROCESS_DEFAULTS[k] for k in PROCESS_KEYS}
+
+
+def clean_process(values: dict | None) -> dict:
+    """Only the known keys, as plain numbers within Bambu Studio's limits (ValueError otherwise)."""
+    out = {}
+    for k, v in (values or {}).items():
+        if k not in PROCESS_KEYS or str(v).strip() in ("", "None"):
+            continue
+        try:
+            x = float(str(v).replace(",", ".").rstrip("%").strip())
+        except ValueError:
+            raise ValueError(f"Ugyldig værdi for {k}: {v}") from None
+        lo, hi = PROCESS_LIMITS[k]
+        if not lo <= x <= hi:
+            raise ValueError(f"{k} skal være mellem {lo:g} og {hi:g}")
+        out[k] = f"{x:g}"
+    return out
+
+
+def changed_process(base: dict, values: dict | None) -> dict:
+    d = process_defaults(base)
+    return {k: v for k, v in clean_process(values).items() if float(v) != float(d[k])}
+
+
+def process_name(base_name: str, filament_name: str) -> str:
+    """"0.20mm Standard @BBL X2D – Elegoo Rapid PETG" from the filament preset's "Elegoo Rapid PETG @Bambu Lab ..."."""
+    line = filament_name.split(" @", 1)[0].strip()
+    return f"{base_name} - {line}" if line else base_name
+
+
+def build_process(base_name: str, values: dict | None, name: str) -> dict:
+    """{name, inherits, base_id, values, variants} - values are the four settings that differ from Bambu's preset."""
+    base = process_by_name(base_name)
+    if not base:
+        raise ValueError(f"Ukendt procesprofil: {base_name}")
+    return {"name": name, "inherits": base["n"], "base_id": base["id"], "values": changed_process(base, values),
+            "variant": base["s"].get("print_extruder_variant") or [], "extruder": base["s"].get("print_extruder_id") or []}
+
+
+def _process_value(k: str, v: str) -> str:
+    return f"{v}%" if k == "ironing_flow" else v
+
+
+def process_file(pr: dict) -> dict:
+    """A Bambu Studio user process preset file (File > Import > Import Configs)."""
+    n = max(len(pr["variant"]), 1)
+    out = {"type": "process", "name": pr["name"], "inherits": pr["inherits"], "from": "User",
+           "is_custom_defined": "0", "version": PRESET_VERSION, "print_settings_id": pr["name"]}
+    if pr["variant"] and any(k in PER_VARIANT_PROCESS for k in pr["values"]):
+        out["print_extruder_variant"], out["print_extruder_id"] = list(pr["variant"]), list(pr["extruder"])
+    for k, v in pr["values"].items():
+        out[k] = [v] * n if k in PER_VARIANT_PROCESS else _process_value(k, v)
+    return out
+
+
+def process_cloud_body(pr: dict, version: str = PRESET_VERSION) -> dict:
+    """Body for Bambu Cloud's slicer settings API, laid out like the process presets Bambu Studio uploads."""
+    n = max(len(pr["variant"]), 1)
+    setting = {"inherits": pr["inherits"], "print_settings_id": pr["name"], "updated_time": str(int(time.time()))}
+    if pr["variant"] and any(k in PER_VARIANT_PROCESS for k in pr["values"]):
+        setting["print_extruder_variant"] = ";".join(f'"{v}"' for v in pr["variant"])
+        setting["print_extruder_id"] = ",".join(pr["extruder"])
+    for k, v in pr["values"].items():
+        setting[k] = ",".join([v] * n) if k in PER_VARIANT_PROCESS else _process_value(k, v)
+    return {"type": "print", "name": pr["name"], "version": version, "base_id": pr["base_id"], "setting": setting}
+
+
+def manual_keys(choice: dict, model: str) -> list[str]:
+    """The settings that differ from the profile's own (filament) or Bambu's process preset (process): what was
+    changed by hand."""
+    out = []
+    p = by_name(choice.get("profile") or "")
+    if p:
+        for k, v in (choice.get("settings") or {}).items():
+            d = p["s"].get(k)
+            try:
+                same = d is not None and float(str(v)) == float(str(d))
+            except ValueError:
+                same = str(v) == str(d)
+            if not same and k in OVERRIDE:
+                out.append(k)
+    proc = choice.get("process") or {}
+    base = process_by_name(proc.get("base") or "") or process_by_name(default_process(model))
+    if base:
+        try:
+            out += list(changed_process(base, proc.get("settings")))
+        except ValueError:
+            pass
+    return out
