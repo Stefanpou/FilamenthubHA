@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.17
+
+- Printerindstillinger på en rulle gemmes nu automatisk, når du har ændret dem – og senest når du lukker rullen. Før gik ændringerne tabt, hvis man ikke trykkede »Gem på filamentet«.
+- Under Bibliotek → Filamentprofiler står der nu, at ændringer dér kun bruges til filen eller Bambu Cloud.
+- Printer settings on a spool now save by themselves after a change and when the spool is closed; before, edits were lost without pressing "Gem på filamentet".
+
 ## 0.3.16
 
 - Printerindstillinger har nu også ironing-hastighed, ironing-flow, flow ratio for første lag og for topfladen. Bambu Studio har dem i procesprofilen, så FilamentHub laver en procesprofil pr. filament (fx »0.20mm Standard @BBL X2D - Elegoo PETG RAPID«), der arver fra Bambus egen og kun ændrer de fire værdier. Den sendes til Bambu Cloud eller hentes som fil sammen med filamentprofilen.

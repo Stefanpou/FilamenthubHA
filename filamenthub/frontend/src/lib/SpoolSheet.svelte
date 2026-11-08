@@ -41,6 +41,34 @@
   function seedSlicer() {
     slChoice = sl.current ? { profile: sl.current.profile, settings: { ...sl.current.settings } } : null;
     slProc = sl.process ? { base: sl.process.base, settings: { ...sl.process.settings } } : null;
+    seedKey = JSON.stringify([slChoice, slProc]);
+  }
+  // Edits are saved by themselves (like the rest of the sheet) shortly after the last keystroke, and at once when
+  // the sheet is closed - a profile that is only suggested is not saved until something is changed or "Gem" is pressed.
+  let seedKey = $state(''), slSaving = $state(false), slSaved = $state(0), slTimer;
+  const slKey = $derived(JSON.stringify([slChoice, slProc]));
+  const slEdited = $derived(!!sl && !!slChoice?.profile && slKey !== seedKey);
+  $effect(() => {
+    if (!slEdited) return;
+    const t = setTimeout(() => autoSave(), 900);
+    slTimer = t;
+    return () => clearTimeout(t);
+  });
+  async function autoSave() {
+    if (slSaving || !slEdited) return;
+    const sent = slKey;
+    slSaving = true;
+    try {
+      const r = await api(`api/spools/${id}/slicer`, { method: 'PUT', body: { ...slChoice, process: slProc } });
+      if (slKey === sent) { sl = r; seedSlicer(); } else { sl = r; seedKey = ''; }  // typed on meanwhile: save again
+      slSaved = r.updated || 1;
+    } catch (e) { toastErr(e); seedKey = sent; } finally { slSaving = false; }
+  }
+  function closeSheet() {
+    clearTimeout(slTimer);
+    if (slEdited) api(`api/spools/${id}/slicer`, { method: 'PUT', body: { ...slChoice, process: slProc } })
+      .then((r) => toast(r.updated > 1 ? `Printerindstillinger gemt på ${r.updated} filamenter` : 'Printerindstillinger gemt'), toastErr);
+    onclose();
   }
   const procChanged = $derived(!!slProc && (slProc.base !== sl?.process?.base
     || JSON.stringify(slProc.settings) !== JSON.stringify(sl?.process?.settings)));
@@ -66,7 +94,8 @@
   }
   async function slRun(fn) {
     slBusy = true;
-    try { if (slDirty) await saveSlicer(true); await fn(); } catch (e) { toastErr(e); } finally { slBusy = false; }
+    clearTimeout(slTimer);
+    try { if (slDirty || slEdited) await saveSlicer(true); await fn(); } catch (e) { toastErr(e); } finally { slBusy = false; }
   }
   function fetchFile(href, name) {
     const a = document.createElement('a');
@@ -154,7 +183,7 @@
 </script>
 
 {#if s}
-<Sheet title={spoolName(s)} {onclose} wide>
+<Sheet title={spoolName(s)} onclose={closeSheet} wide>
   <div class="hero" style="--c:{hex(s.color)}">
     <Spool color={s.color} colors={s.colors} pct={pctOf(s)} size={150} tilt />
     <div class="stats">
@@ -168,7 +197,7 @@
         {#if s.tag}<span class="badge">RFID</span>{/if}
         {#if s.dried}<span class="badge dried">Tørret {agoDa(s.dried)}</span>{/if}
       </div>
-      <button class="btn small" style="margin-top:12px" onclick={() => { const sid = id; onclose(); go('/add', { edit: sid }); }}><Icon name="edit" size={16} /> Rediger filament</button>
+      <button class="btn small" style="margin-top:12px" onclick={() => { const sid = id; closeSheet(); go('/add', { edit: sid }); }}><Icon name="edit" size={16} /> Rediger filament</button>
     </div>
   </div>
 
@@ -252,8 +281,8 @@
         <SlicerFields candidates={sl.candidates} bind:choice={slChoice} bind:process={slProc} {processes}
           defaults={slChoice?.profile === sl.current?.profile ? sl.current?.defaults : null} />
         {#if slChoice?.profile}
-          {#if slDirty}<button class="btn" onclick={() => slRun(() => saveSlicer(false))} disabled={slBusy}>Gem på filamentet</button>
-            <p class="tiny muted">Gemmes på alle ruller af {s.name} – og på andre filamenter af samme type og farve.</p>{/if}
+          {#if !sl.current?.saved && !slEdited}<button class="btn" onclick={() => { slBusy = true; saveSlicer(false).catch(toastErr).finally(() => (slBusy = false)); }} disabled={slBusy}>Gem på filamentet</button>{/if}
+          <p class="tiny muted" aria-live="polite">{#if slSaving || slEdited}Gemmer …{:else if slSaved}Gemt på alle ruller af {s.name}{slSaved > 1 ? ` og ${slSaved - 1} andre filamenter af samme type og farve` : ''}.{:else}Ændringer gemmes automatisk på alle ruller af {s.name} og på andre filamenter af samme type og farve.{/if}</p>
           <label class="f">Profilnavn i Bambu Studio<input class="input" bind:value={presetName}></label>
           {#if procOwn}<label class="f">Procesprofil i Bambu Studio<input class="input" bind:value={processName}></label>{/if}
           <div class="row wrap">

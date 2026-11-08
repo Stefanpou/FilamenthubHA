@@ -177,7 +177,7 @@
       {#if procOwn}<label class="f">Procesprofil i Bambu Studio<input class="input" bind:value={procName} maxlength="200"></label>{/if}
       {#if inCloud.has(name.trim().toLowerCase())}<p class="tiny warn">Der findes allerede en profil med det navn i Bambu Cloud – sender du, bliver du spurgt, om den skal erstattes.</p>{/if}
       {#if !res?.machine}<p class="tiny warn">Log ind på Bambu Cloud under Indstillinger, så FilamentHub kender din printer.</p>{/if}
-      <p class="tiny muted">Profilen arver fra Bambus egen {res?.machine}-profil og ændrer kun det, der står her. Filen importeres i Bambu Studio under Filer → Importér → Importér konfigurationer.</p>
+      <p class="tiny muted">Ændringer her gemmes ikke på dine ruller – de bruges kun til filen eller Bambu Cloud. Vil du gemme dem på et filament, så åbn rullen under Lager. Profilen arver fra Bambus egen {res?.machine}-profil og ændrer kun det, der står her. Filen importeres i Bambu Studio under Filer → Importér → Importér konfigurationer.</p>
     </div>
     {#snippet footer()}
       <button class="btn grow" onclick={download} disabled={busy || !name.trim()}><Icon name="download" size={16} /> Download</button>
