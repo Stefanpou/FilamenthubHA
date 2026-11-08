@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.18
+
+- Ny boks »Silica« på forsiden: registrér, hvornår silicaen sidst blev tørret – for hver AMS og for de tørrebokse/placeringer, du vælger. »Tørret i dag« eller vælg en dato; efter 30 dage bliver datoen orange.
+- New "Silica" card on the dashboard: record when the desiccant was last dried, per AMS unit and per chosen fixed location.
+
 ## 0.3.17
 
 - Printerindstillinger på en rulle gemmes nu automatisk, når du har ændret dem – og senest når du lukker rullen. Før gik ændringerne tabt, hvis man ikke trykkede »Gem på filamentet«.

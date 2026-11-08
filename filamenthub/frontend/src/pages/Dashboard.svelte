@@ -4,6 +4,7 @@
   import SlotStrip from '../lib/SlotStrip.svelte';
   import SlotPicker from '../lib/SlotPicker.svelte';
   import LowStock from '../lib/LowStock.svelte';
+  import Silica from '../lib/Silica.svelte';
   import SpoolSheet from '../lib/SpoolSheet.svelte';
   import Icon from '../lib/ui/Icon.svelte';
   import { app, go, toast, toastErr } from '../lib/stores.svelte.js';
@@ -97,6 +98,8 @@
       <span class="muted small">Rulle ↔ lager</span></div>
     <SlotStrip />
   </section>
+
+  <Silica />
 
   <div class="two">
     <section>

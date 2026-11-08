@@ -136,5 +136,7 @@ def put_locations(body: LocationsIn):
                 store.update_spool(s["id"], location=to if p[1] is None else place_text(to, p[1]))
     db.set(KEY, [{"name": n["name"], "slots": n["slots"]} for n in new])
     if renames:
+        from . import silica
+        silica.rename(db, renames)
         m.fm.trigger()
     return overview(store, db)

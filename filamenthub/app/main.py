@@ -1419,6 +1419,7 @@ from . import power; app.include_router(power.router); power.attach(app)
 from . import api_slicer; app.include_router(api_slicer.router)
 from . import features; app.include_router(features.router); features.attach(app)
 from . import locations; app.include_router(locations.router)
+from . import silica; app.include_router(silica.router)
 
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
