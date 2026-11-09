@@ -187,6 +187,8 @@ class Watcher:
         self.db = db
         self.prev: tuple[str, str] | None = None
         self.pending: dict | None = db.get("features_pending") or None   # the finished print still being handled
+        # finished prints still waiting for Bambu Cloud to list them when the next plate already started
+        self.backlog: list[dict] = [b for b in (db.get("features_backlog") or []) if isinstance(b, dict)]
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -207,6 +209,7 @@ class Watcher:
 
     def _save(self) -> None:
         self.db.set("features_pending", self.pending or {})
+        self.db.set("features_backlog", self.backlog)
 
     def tick(self, engine=None, now: float | None = None) -> None:
         engine = engine or _main().engine
@@ -223,11 +226,23 @@ class Watcher:
             self._save()
         if cur:
             self.prev = cur
+        if cfg["library"]:
+            for b in list(self.backlog):
+                if now >= b["next_archive"]:
+                    self._try_archive(engine, b, now)
+                if b["archived"] or b["archive_try"] >= len(ARCHIVE_TRIES):
+                    self.backlog.remove(b)
+                    self._save()
         p = self.pending
         if not p:
             return
         if s and s["state"] in ACTIVE_STATES and s["task_id"] != p["task_id"]:
-            self.pending = None   # a new print started: the old one is done with (and the plug stays on)
+            # a new print started (the next plate of the same file, say): the plug stays on and no photo is taken any
+            # more, but the finished print still goes into the library once Bambu Cloud lists it
+            if cfg["library"] and not p["archived"] and p["archive_try"] < len(ARCHIVE_TRIES):
+                self.backlog = [b for b in self.backlog if b["task_id"] != p["task_id"]][-9:] + [
+                    {k: p[k] for k in ("task_id", "name", "end", "archive_try", "next_archive", "archived")}]
+            self.pending = None
             self._save()
             return
         if cfg["photo"] and not p["photo"] and now >= p["end"] + PHOTO_TRIES[min(p.get("photo_try", 0), len(PHOTO_TRIES) - 1)]:

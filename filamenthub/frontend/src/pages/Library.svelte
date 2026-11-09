@@ -9,6 +9,9 @@
   import { onMount } from 'svelte';
 
   let items = $state(null), total = $state(0), q = $state(''), ft = $state(null), sel = $state(null), busy = $state(false), imp = $state(null);
+  // several plates of one project file share the title: tell them apart by plate
+  const shared = $derived(new Set((items || []).map((e) => e.title).filter((t, i, a) => a.indexOf(t) !== i)));
+  const plateOf = (e) => (e.plate_name || ((e.plate > 1 || shared.has(e.title)) && e.plate ? `Plade ${e.plate}` : ''));
   let ver = $state(0);
 
   async function load() {
@@ -88,7 +91,7 @@
           </div>
           <div class="tx">
             <b class="ellipsis">{e.title}</b>
-            <span class="tiny muted">{when(e)}</span>
+            <span class="tiny muted">{#if plateOf(e)}<span class="pl">{plateOf(e)}</span>{' · '}{/if}{when(e)}</span>
             <span class="tiny muted">{fmtG1(e.weight)} · {dur(e.seconds)}</span>
             <span class="chips">{#each mats(e).filter((m) => m.type) as m}<span class="chip tiny"><i class="d" style="background:{hex(m.color)}"></i>{m.type}</span>{/each}</span>
           </div>
@@ -110,7 +113,7 @@
         <dt>Færdig</dt><dd>{when(sel)}{sel.status === 'failed' ? ' (fejlet)' : ''}</dd>
         <dt>Varighed</dt><dd>{dur(sel.seconds)}</dd>
         <dt>Vægt</dt><dd>{fmtG1(sel.weight)}</dd>
-        {#if sel.plate_name || sel.plate}<dt>Plade</dt><dd>{sel.plate_name || sel.plate}</dd>{/if}
+        {#if sel.plate_name || sel.plate}<dt>Plade</dt><dd>{sel.plate_name ? `${sel.plate_name} (plade ${sel.plate})` : sel.plate}</dd>{/if}
         {#if sel.printer}<dt>Printer</dt><dd>{sel.printer}</dd>{/if}
         {#if sel.design_title}<dt>Design</dt><dd>{sel.design_title}</dd>{/if}
         {#if sel.energy}<dt>Strøm</dt><dd>{nf2.format(sel.energy.kwh)} kWh{sel.energy.cost != null ? ` · ${nf2.format(sel.energy.cost)} kr` : ''}</dd>{/if}
@@ -137,6 +140,7 @@
 {/if}
 
 <style>
+  .pl { color: var(--text); font-weight: 500; }
   h1 { font-size: 28px; }
   .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   @media (min-width: 640px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

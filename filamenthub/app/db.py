@@ -26,6 +26,25 @@ CREATE TABLE IF NOT EXISTS print_energy (
     last_ts    REAL NOT NULL
 );
 
+-- AMS drying sessions and their electricity (app/drying.py). with_print: a print ran meanwhile (the meter measures
+-- the whole printer, so that part of the energy is the print's too).
+CREATE TABLE IF NOT EXISTS drying (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    unit       INTEGER NOT NULL,
+    model      TEXT,
+    start_ts   REAL NOT NULL,
+    last_ts    REAL NOT NULL,
+    end_ts     REAL,
+    kwh        REAL NOT NULL DEFAULT 0,
+    cost       REAL NOT NULL DEFAULT 0,
+    priced_kwh REAL NOT NULL DEFAULT 0,
+    temp       REAL,
+    hours      REAL,
+    filament   TEXT,
+    with_print INTEGER NOT NULL DEFAULT 0,
+    source     TEXT NOT NULL DEFAULT 'auto'
+);
+
 CREATE TABLE IF NOT EXISTS kv (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL

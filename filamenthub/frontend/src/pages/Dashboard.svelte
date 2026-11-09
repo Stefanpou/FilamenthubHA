@@ -5,6 +5,7 @@
   import SlotPicker from '../lib/SlotPicker.svelte';
   import LowStock from '../lib/LowStock.svelte';
   import Silica from '../lib/Silica.svelte';
+  import Drying from '../lib/Drying.svelte';
   import SpoolSheet from '../lib/SpoolSheet.svelte';
   import Icon from '../lib/ui/Icon.svelte';
   import { app, go, toast, toastErr } from '../lib/stores.svelte.js';
@@ -100,6 +101,7 @@
   </section>
 
   <Silica />
+  <Drying />
 
   <div class="two">
     <section>

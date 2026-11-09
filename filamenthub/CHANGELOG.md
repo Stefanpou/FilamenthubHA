@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.19
+
+- Printbiblioteket mister ikke længere et print, når næste plade fra samme fil startes lige efter: det færdige print gemmes, så snart Bambu Cloud viser det. Kort med samme navn viser nu pladenummeret.
+- Ny boks »AMS-tørring« på forsiden: FilamentHub ser, når AMS'en tørrer (temperatur, tid tilbage, filament) og måler strøm og pris på printerens stik. Tidligere tørringer kan hentes fra Home Assistants historik.
+- Back-to-back plates of one file all reach the library; cards show the plate number. New "AMS-tørring" card: drying sessions with electricity and cost, also imported from Home Assistant history.
+
 ## 0.3.18
 
 - Ny boks »Silica« på forsiden: registrér, hvornår silicaen sidst blev tørret – for hver AMS og for de tørrebokse/placeringer, du vælger. »Tørret i dag« eller vælg en dato; efter 30 dage bliver datoen orange.

@@ -226,11 +226,12 @@ class Meter:
 
     def sample(self, engine=None, now: float | None = None) -> None:
         cfg = settings(self.db)
+        now = now or time.time()
         if not configured(cfg):
             self.now = {"ok": False, "error": "", "ts": 0, "power_w": None, "price": None}
             self._last = None
+            self._drying(engine, now, None, None, None)
             return
-        now = now or time.time()
         ha = self.client(cfg)
         try:
             w = power_w(ha.state(cfg["power_entity"])) if cfg["power_entity"] else None
@@ -242,10 +243,12 @@ class Meter:
         except HTTPException as e:
             self.now = {**self.now, "ok": False, "error": e.detail}
             self._last = None
+            self._drying(engine, now, None, None, None)
             return
         if price is None:
             price = _num(cfg["fixed_price"])
         self.now = {"ok": True, "error": "", "ts": now, "power_w": w, "price": price}
+        self._drying(engine, now, w, kwh, price)
 
         engine = engine or _main().engine
         with engine.lock:
@@ -272,6 +275,22 @@ class Meter:
         self.db.execute(
             "UPDATE print_energy SET kwh=kwh+?, cost=cost+?, priced_kwh=priced_kwh+?, last_ts=? WHERE task_id=?",
             (used, cost, used if price is not None else 0.0, now, tid))
+
+    def _drying(self, engine, now: float, w, kwh, price) -> None:
+        """AMS drying sessions and their share of the meter (app/drying.py)."""
+        from . import drying
+        from .live import ams_block
+        try:
+            engine = engine or _main().engine
+            mq = getattr(engine, "mqtt", None)
+            fresh = bool(mq and mq.status == "connected" and mq.last_message and now - mq.last_message < 300)
+            with engine.lock:
+                st = engine.state if fresh else None   # (no reports: the printer is off, so the AMS is not drying)
+                s = print_summary(st) if st else None
+                models = {u["unit"]: u["model"] for u in ams_block(st or {}, getattr(engine, "modules", None) or {})}
+            drying.get_tracker().sample(st, now, w, kwh, price, bool(s and s["state"] in ACTIVE_STATES), models)
+        except Exception:
+            log.exception("drying sample failed")
 
     def avg_watts(self) -> float | None:
         """Average power of recorded prints (at least an hour of data), for the calculator's default."""
