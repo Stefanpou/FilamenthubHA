@@ -23,7 +23,8 @@ import time
 import zipfile
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Query
+import requests
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
@@ -400,6 +401,68 @@ def camera_frame():
             _frame.update(ts=time.time(), entity=cfg["camera_entity"], img=img, type=ctype)
         img, ctype = _frame["img"], _frame["type"]
     return Response(img, media_type=ctype, headers={"Cache-Control": "no-store"})
+
+
+# ---- live video: Home Assistant's HLS stream of the camera, passed through here so the page needs no other origin
+HLS_TOKEN = re.compile(r"^[A-Za-z0-9_-]{8,200}$")
+HLS_PATH = re.compile(r"^[A-Za-z0-9_./-]{1,200}$")
+HLS_TYPES = {".m3u8": "application/vnd.apple.mpegurl", ".m4s": "video/iso.segment", ".mp4": "video/mp4"}
+
+
+def _ws_call(cfg: dict, msg: dict, timeout: float = 15.0) -> dict:
+    """One command over Home Assistant's websocket API (what the REST API cannot do)."""
+    from curl_cffi.requests import Session
+    ws = Session().ws_connect(cfg["url"].rstrip("/").replace("http", "ws", 1) + "/api/websocket", timeout=timeout)
+    try:
+        recv = lambda: json.loads(ws.recv()[0])  # noqa: E731
+        recv()
+        ws.send_str(json.dumps({"type": "auth", "access_token": cfg["token"]}))
+        if recv().get("type") != "auth_ok":
+            raise HTTPException(502, "Home Assistant afviste tokenet")
+        ws.send_str(json.dumps({"id": 1, **msg}))
+        while True:
+            r = recv()
+            if r.get("id") == 1:
+                return r
+    finally:
+        ws.close()
+
+
+@router.get("/api/printer/camera/stream")
+def camera_stream():
+    """Start (or join) Home Assistant's video stream of the camera: the playlist to play, under our own path."""
+    db = _main().db
+    cfg = settings(db)
+    if not cfg["live_camera"] or not cfg["camera_entity"]:
+        raise HTTPException(404, "Live-kamera er slået fra")
+    try:
+        r = _ws_call(power.settings(db), {"type": "camera/stream", "entity_id": cfg["camera_entity"], "format": "hls"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(502, f"Home Assistant svarer ikke ({type(e).__name__})") from e
+    url = (r.get("result") or {}).get("url") or ""
+    m = re.fullmatch(r"/api/hls/([A-Za-z0-9_-]+)/(master_playlist\.m3u8)", url)
+    if not r.get("success") or not m:
+        raise HTTPException(502, "Kameraet kan ikke streame video lige nu")
+    return {"url": f"api/printer/camera/hls/{m.group(1)}/{m.group(2)}"}
+
+
+@router.get("/api/printer/camera/hls/{token}/{path:path}")
+def camera_hls(token: str, path: str, request: Request):
+    if not HLS_TOKEN.match(token) or not HLS_PATH.match(path) or ".." in path:
+        raise HTTPException(400, "Ugyldig sti")
+    cfg = power.settings(_main().db)
+    qs = request.url.query
+    try:
+        r = requests.get(f"{cfg['url'].rstrip('/')}/api/hls/{token}/{path}" + (f"?{qs}" if qs else ""), timeout=20)
+    except requests.RequestException as e:
+        raise HTTPException(502, f"Home Assistant svarer ikke ({type(e).__name__})") from e
+    if r.status_code != 200:
+        raise HTTPException(404 if r.status_code == 404 else 502, "Videoen er ikke klar")
+    ext = "." + path.rsplit(".", 1)[-1] if "." in path else ""
+    return Response(r.content, media_type=HLS_TYPES.get(ext, r.headers.get("content-type", "application/octet-stream")),
+                    headers={"Cache-Control": "no-store"})
 
 
 @router.get("/api/plug")

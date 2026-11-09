@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.20
+
+- Kameraet på forsiden starter ikke længere af sig selv – tryk »Vis kamera« for at se det, og »Sluk« for at stoppe det.
+- Kameraet vises nu som video fra Home Assistant i stedet for enkeltbilleder, så det ikke hakker (få sekunders forsinkelse). Kan videoen ikke starte, vises billeder som før, men uden at billedet blinker mellem hvert.
+- The dashboard camera is off until switched on, and plays Home Assistant's video stream (HLS) instead of still frames; still frames, preloaded, remain the fallback.
+
 ## 0.3.19
 
 - Printbiblioteket mister ikke længere et print, når næste plade fra samme fil startes lige efter: det færdige print gemmes, så snart Bambu Cloud viser det. Kort med samme navn viser nu pladenummeret.
