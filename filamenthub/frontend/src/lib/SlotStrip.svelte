@@ -68,6 +68,7 @@
                   {:else if s.present}
                     <b class="ellipsis nm">{s.material || 'Ukendt materiale'}</b>
                     <span class="muted small ellipsis">{s.sub_brand || 'Ingen rulle valgt'}</span>
+                    {#if s.remain >= 0}<span class="muted small mono" title="AMS’ens egen måling – vælg rullen for præcis vægt">{s.weight ? `ca. ${fmtG(Math.round(s.weight * s.remain / 100))} · ` : ''}{s.remain}%</span>{/if}
                   {:else}
                     <b class="nm muted">{s.kind === 'ext' ? 'Ikke i brug' : 'Tom'}</b>
                   {/if}

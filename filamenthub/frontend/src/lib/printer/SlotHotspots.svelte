@@ -11,7 +11,7 @@
     ...BAYS.map((x, i) => ({ s: bays[i], x, y: bayY, w: 86 })),
     ...(ext && extAt ? [{ s: ext, x: extAt.x, y: extAt.y, w: 124 }] : []),
   ].filter((t) => t.s));
-  const title = (s) => (s.present ? [s.label, s.spool ? `${s.spool.vendor} ${s.material} ${s.spool.name}` : s.material, s.remaining_pct != null ? `${s.remaining_pct}%` : ''].filter(Boolean).join(' · ') : `${s.label} – tom`);
+  const title = (s) => (s.present ? [s.label, s.spool ? `${s.spool.vendor} ${s.material} ${s.spool.name}` : s.material, s.remaining_g != null ? `${s.remaining_est ? 'ca. ' : ''}${s.remaining_g} g tilbage` : '', s.remaining_pct != null ? `${s.remaining_pct}%` : ''].filter(Boolean).join(' · ') : `${s.label} – tom`);
 </script>
 
 {#each tags as { s, x, y, w } (s.key)}
@@ -20,7 +20,7 @@
     onclick={onslot ? () => onslot(s.key) : undefined} role={onslot ? undefined : 'note'}>
     {#if s.present}
       <span class="m"><i></i>{s.material || '–'}</span>
-      <span class="n">{#if s.remaining_pct != null}<b>{s.remaining_pct}%</b> {/if}{s.spool?.name || (onslot ? 'Vælg rulle' : 'Ukendt rulle')}</span>
+      <span class="n">{#if s.remaining_g != null}<b>{s.remaining_est ? '~' : ''}{s.remaining_g} g</b> {:else if s.remaining_pct != null}<b>{s.remaining_pct}%</b> {/if}{s.spool?.name || (onslot ? 'Vælg rulle' : 'Ukendt rulle')}</span>
     {:else}
       <span class="m">tom</span>
     {/if}

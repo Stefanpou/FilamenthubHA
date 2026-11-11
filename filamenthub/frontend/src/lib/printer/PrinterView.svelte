@@ -135,7 +135,8 @@
           <i class="dot"></i>
           <span class="lbl">{s.kind === 'ext' ? 'Ekstern' : s.label}</span>
           <span class="mat">{s.present ? s.material || '–' : 'tom'}</span>
-          {#if s.remaining_pct != null}<span class="rem mono">{s.remaining_pct}%</span>{/if}
+          {#if s.remaining_g != null}<span class="rem mono" title={s.remaining_est ? 'Anslået ud fra AMS’ens procent – vælg rullen for præcis vægt' : 'Tilbage på rullen'}>{s.remaining_est ? 'ca. ' : ''}{s.remaining_g} g</span>{/if}
+          {#if s.remaining_pct != null}<span class="rem mono muted">{s.remaining_pct}%</span>{/if}
           {#if s.spool}<span class="nm muted ellipsis">{s.spool.name}</span>{/if}
         </li>
       {/each}

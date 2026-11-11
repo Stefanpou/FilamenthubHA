@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.21
+
+- Hvert slot i AMS'en viser nu, hvor mange gram der er tilbage på rullen – på printertegningen, i slotlisten og under »I printeren«. Uden en valgt rulle er tallet anslået ud fra AMS'ens egen procent.
+- Lager viser rullerne, der sidder i AMS'en, øverst for sig selv (i slot-rækkefølge), og resten under »På lager«.
+- AMS slots show grams left (estimated from the AMS percentage when no spool is picked); Lager lists the spools in the AMS in their own section at the top.
+
 ## 0.3.20
 
 - Kameraet på forsiden starter ikke længere af sig selv – tryk »Vis kamera« for at se det, og »Sluk« for at stoppe det.

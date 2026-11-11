@@ -75,6 +75,11 @@
     }[sort];
     return l.sort((a, b) => cmp(a, b) || byName(a, b));
   });
+  // Spools sitting in the AMS / holder get their own section at the top, in slot order.
+  const slotOrder = $derived(Object.fromEntries((app.status?.slots || []).filter((x) => x.assignment).map((x, i) => [x.assignment.spool.id, i])));
+  const inAms = $derived(archived ? [] : shown.filter((s) => s.id in slotOrder).sort((a, b) => slotOrder[a.id] - slotOrder[b.id]));
+  const rest = $derived(inAms.length ? shown.filter((s) => !(s.id in slotOrder)) : shown);
+  const amsView = $derived(view === 'group' ? 'list' : view);
   const activeFilters = $derived([vendor, location, colorFam, low ? 'low' : '', noPrice ? 'price' : '', unweighed ? 'weight' : ''].filter(Boolean).length);
   const total = $derived(shown.filter((s) => !s.archived).reduce((a, s) => a + s.remaining, 0));
   const reset = () => { q = ''; material = ''; vendor = ''; location = ''; colorFam = ''; low = false; noPrice = false; unweighed = false; };
@@ -138,10 +143,23 @@
     </div>
 
     {#if shown.length}
-      {#if view === 'cards'}
-        <div class="grid">{#each shown as s, i (s.id)}<SpoolCard {s} index={i} slotLabel={inSlot[s.id] || ''} onclick={() => (open = s.id)} />{/each}</div>
-      {:else}
-        <InventoryViews {view} spools={shown} {inSlot} {groupBy} {family} onopen={(id) => (open = id)} />
+      {#if inAms.length}
+        <section class="stack ams" style="gap:10px">
+          <div class="row between"><h2 class="sec">I AMS'en</h2><span class="small muted">{inAms.length} ruller · {fmtKg(inAms.reduce((a, s) => a + s.remaining, 0))}</span></div>
+          {#if amsView === 'cards'}
+            <div class="grid">{#each inAms as s, i (s.id)}<SpoolCard {s} index={i} slotLabel={inSlot[s.id] || ''} onclick={() => (open = s.id)} />{/each}</div>
+          {:else}
+            <InventoryViews view={amsView} spools={inAms} {inSlot} {groupBy} {family} onopen={(id) => (open = id)} />
+          {/if}
+        </section>
+        {#if rest.length}<h2 class="sec">På lager</h2>{/if}
+      {/if}
+      {#if rest.length}
+        {#if view === 'cards'}
+          <div class="grid">{#each rest as s, i (s.id)}<SpoolCard {s} index={i} slotLabel={inSlot[s.id] || ''} onclick={() => (open = s.id)} />{/each}</div>
+        {:else}
+          <InventoryViews {view} spools={rest} {inSlot} {groupBy} {family} onopen={(id) => (open = id)} />
+        {/if}
       {/if}
     {:else}
       <div class="glass pad center stack"><p class="muted">Ingen ruller matcher.</p><button class="btn" onclick={reset}>Nulstil filtre</button></div>
@@ -154,6 +172,8 @@
 <style>
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 12px; }
   @media (min-width: 700px) { .grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; } }
+  .sec { font-size: 16px; font-weight: 600; margin: 0 2px; }
+  .ams { padding-bottom: 8px; }
   .viewbar { flex-wrap: wrap; gap: 8px; }
   .seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 10px; background: var(--panel); border: 1px solid var(--panel-border); }
   .seg button { all: unset; cursor: pointer; display: grid; place-items: center; width: 32px; height: 28px; border-radius: 8px; color: var(--muted); transition: background-color .14s, color .14s; }

@@ -320,12 +320,15 @@ def slots_block(state: dict, modules: dict, assignments: dict, spools: dict) -> 
             init = sp.get("initial") or 0
             if init > 0:
                 rem_pct = max(0, min(100, round(100 * (sp.get("remaining") or 0) / init)))
+        rem_est = False
         if rem_pct is None and s.remain is not None and s.remain >= 0:
             rem_pct = int(s.remain)
+            if rem_g is None and s.weight:  # no spool picked: the AMS's own % of the spool size it read (RFID)
+                rem_g, rem_est = round(s.weight * s.remain / 100), True
         out.append({
             "key": s.key, "label": s.label, "kind": s.kind, "unit": s.unit, "tray": s.tray, "present": s.present,
             "material": s.material, "color": s.color, "colors": s.colors, "sub_brand": s.sub_brand,
-            "remaining_g": rem_g, "remaining_pct": rem_pct,
+            "remaining_g": rem_g, "remaining_pct": rem_pct, "remaining_est": rem_est,
             # feeding the nozzle that is in use right now (the other nozzle may hold a standby spool)
             "active": bool(s.active and (act is None or feeds.get(s.key, act) == act)),
             "nozzle": feeds.get(s.key),
