@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.23
+
+- Når en rulle løber tør, og AMS'en fortsætter fra en reserverulle med samme filament, vises forbruget nu live på den nye rulle fra skiftet og frem (før blev det ved med at stå på den tomme rulle, så intet blev vist).
+- Live usage follows the AMS backup spool after a runout (printer mapping), counted from the switch.
+
 ## 0.3.22
 
 - Fejlsøgning: læsbar oversigt over printerens slot-data (/api/printer/debug).

@@ -115,6 +115,7 @@ class Engine:
         self._phys_ts: dict[str, float] = {}        # ... and when it last changed (unknown before the service started)
         self._phys_changed: dict[str, float] = {}   # when a slot last changed physically while the service watched
         self._active_ts: dict[str, float] = {}      # when each slot was last seen feeding a nozzle
+        self._live_switch: dict = {}                 # live estimate: task entry -> (backup slot, progress at the switch)
         self._feed_seen: tuple | None = None        # (task id, feeding slots) last written to task_progress.feed_log
         self._unstampable: set[int] = set()         # spools whose Spoolman stamp cannot be read (deleted)
         self._free_empty: dict[str, tuple] = {}     # unassigned job slot went empty: (since, while feeding)
@@ -1831,14 +1832,31 @@ class Engine:
             return {}
         frac = max(0.0, min(1.0, frac))
         assignments = self.db.current_assignments()
+        entries = [e for e in task.get("amsDetailMapping") or [] if slot_from_task_entry(e)]
+        # The AMS switches to a backup spool when one runs out ("AMS filament backup"); the printer's own mapping
+        # then names the new slot while the cloud task keeps the old one. Count the new spool from the switch on.
+        with self.lock:
+            now_slots = slots_from_mapping(self.state.get("mapping")) if self.state else []
+        sw = self._live_switch if self._live_switch.get("tid") == tid else {"tid": tid}
+        self._live_switch = sw
+        live_ok = live.get("task_id") == tid
         out: dict[int, float] = {}
-        for e in task.get("amsDetailMapping") or []:
-            slot = slot_from_task_entry(e)
-            a = assignments.get(slot) if slot else None
-            grams = float(e.get("weight") or 0) * frac
-            if a and a["spool_id"] and grams > 0:
-                out[a["spool_id"]] = out.get(a["spool_id"], 0.0) + grams
-        return out
+        for i, e in enumerate(entries):
+            slot, start = slot_from_task_entry(e), 0.0
+            if live_ok and len(now_slots) == len(entries) and now_slots[i] != slot:
+                prev = sw.get(i)
+                if not prev or prev[0] != now_slots[i]:
+                    sw[i] = prev = (now_slots[i], frac)
+                slot, start = prev
+            elif not live_ok and i in sw:
+                slot, start = sw[i]
+            w = float(e.get("weight") or 0)
+            # (the spool that ran out keeps what it gave before the switch, while it is still assigned)
+            for sl, grams in ((slot, w * max(0.0, frac - start)), (slot_from_task_entry(e), w * start if start else 0.0)):
+                a = assignments.get(sl) if sl else None
+                if a and a["spool_id"] and grams > 0:
+                    out[a["spool_id"]] = out.get(a["spool_id"], 0.0) + grams
+        return {k: round(v, 2) for k, v in out.items()}
 
     def status(self) -> dict:
         auth = self.auth
