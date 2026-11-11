@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.22
+
+- Fejlsøgning: læsbar oversigt over printerens slot-data (/api/printer/debug).
+- Read-only printer slot diagnostics endpoint.
+
 ## 0.3.21
 
 - Hvert slot i AMS'en viser nu, hvor mange gram der er tilbage på rullen – på printertegningen, i slotlisten og under »I printeren«. Uden en valgt rulle er tallet anslået ud fra AMS'ens egen procent.

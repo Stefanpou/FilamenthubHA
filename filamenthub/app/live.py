@@ -848,3 +848,20 @@ async def printer_cover():
 @router.get("/api/printer/model.3mf")
 async def printer_model():
     return await run_in_threadpool(_job_file, "model.bin", "application/octet-stream")
+
+
+@router.get("/api/printer/debug")
+def printer_debug():
+    """Read-only: the parts of the printer's report that decide which slot is feeding (for diagnosing slot tracking)."""
+    engine = _main().engine
+    with engine.lock:
+        st = json.loads(json.dumps(engine.state)) if engine.state else {}
+    ams = st.get("ams") or {}
+    return JSONResponse({
+        "extruder": (st.get("device") or {}).get("extruder"),
+        "ams": {k: v for k, v in ams.items() if k != "ams"},
+        "trays": [{"unit": u.get("id"), "tray": [{k: t.get(k) for k in ("id", "state", "remain", "tray_type", "tray_color")}
+                                                 for t in u.get("tray") or []]} for u in ams.get("ams") or []],
+        "mapping": st.get("mapping"), "vir_slot": [{k: v.get(k) for k in ("id", "tray_type", "tray_color")} for v in st.get("vir_slot") or []],
+        "print": {k: st.get(k) for k in ("gcode_state", "mc_percent", "layer_num", "stg_cur", "print_error", "hw_switch_state")},
+    })
