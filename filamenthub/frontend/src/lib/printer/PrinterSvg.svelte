@@ -10,7 +10,8 @@
   let { printer = null, slots = [], tone = 'idle', progress = 0, still = false, onslot = null, children } = $props();
 
   // viewBox (VX VY VW VH); the free column right of the printer holds the HUD (top) and the external holder ----
-  const VX = 70, VY = 10, VW = 690, VH = 760;
+  const STACK = 224;                                  // height of one AMS; extra units stack on top of the first
+  const VX = 70, VW = 690;
   const BAYS = [188, 279, 371, 462];                 // AMS bay centres (x)
   const AMS = { sy: 170, rmax: 118, w: 64 };          // spool axis y (hidden behind the AMS front), max radius, width
   const EXT = { x: 590, y: 520, r: 82, w: 58 };       // external holder spool (edge-on, axis to the side)
@@ -28,8 +29,16 @@
   const doorOpen = $derived(printer?.door_open === true);   // only printers with a door sensor report it
   const speedLvl = $derived(printer?.speed_level || 2);
 
-  const amsSlots = $derived(slots.filter((s) => s.kind === 'ams' && s.unit === (slots.find((x) => x.kind === 'ams')?.unit ?? 0)));
-  const bays = $derived([0, 1, 2, 3].map((i) => amsSlots.find((s) => s.tray === i) || null));
+  // one entry per AMS unit (A at the bottom, on the printer; B, C … stacked above it)
+  const units = $derived.by(() => {
+    const ids = [...new Set(slots.filter((s) => s.kind === 'ams' && s.unit < 128).map((s) => s.unit))].sort((a, b) => a - b);
+    return (ids.length ? ids : [0]).map((u, i) => ({
+      unit: u, dy: i * STACK, letter: String.fromCharCode(65 + u),
+      bays: [0, 1, 2, 3].map((t) => slots.find((s) => s.kind === 'ams' && s.unit === u && s.tray === t) || null),
+    }));
+  });
+  const VY = $derived(10 - STACK * (units.length - 1));
+  const VH = $derived(760 + STACK * (units.length - 1));
   const ext = $derived(slots.find((s) => s.kind === 'ext') || null);
   const active = $derived(slots.find((s) => s.active) || null);
 
@@ -93,7 +102,8 @@
       d = `M${EXT.x - EXT.w / 2 - 4} ${EXT.y - 30} C 520 ${EXT.y - 120}, ${ex + 60} ${ey - 40}, ${ex} ${ey}`;
     } else {
       const bx = BAYS[active.tray] ?? 325;
-      d = `M${bx} 238 C ${bx} 300, ${ex} ${ey - 50}, ${ex} ${ey}`;
+      const dy = units.find((u) => u.unit === active.unit)?.dy ?? 0;
+      d = `M${bx} ${238 - dy} C ${bx} 300, ${ex} ${ey - 50}, ${ex} ${ey}`;
     }
     return { d, color: spoolColor(active) };
   });
@@ -119,7 +129,7 @@
   </g>
 {/snippet}
 
-<div class="stage" bind:this={root} style="--led: {ledColor}">
+<div class="stage" bind:this={root} style="--led: {ledColor}; aspect-ratio: {VW} / {VH}; max-width: calc(min(80vh, 920px) * {VW} / {VH})">
   <svg class="layer back" viewBox="{VX} {VY} {VW} {VH}" aria-hidden="true">
     <defs>
       <linearGradient id="pv-body" x1="0" y1="0" x2="1" y2="0">
@@ -140,7 +150,9 @@
     <!-- floor shadow -->
     <ellipse cx="320" cy="758" rx="250" ry="8" fill="#000" opacity="0.55"/>
 
-    <!-- ===== AMS 2 Pro: clear dome with the four spools ===== -->
+    <!-- ===== AMS 2 Pro units: clear dome with the four spools ===== -->
+    {#each [...units].reverse() as { bays, dy, letter } (dy)}
+    <g transform="translate(0 {-dy})">
     <path d="M134 130 V52 Q134 22 166 22 H484 Q516 22 516 52 V130 Z" fill="#0b0d12" stroke="#4a5262" stroke-width="1.5"/>
     <g clip-path="url(#pv-domeclip)">
       {#each BAYS as bx, i (bx)}
@@ -180,6 +192,9 @@
       <rect x="473" y="142.5" width="13" height="7" rx="1.5" fill="none" stroke="#dfe3ea" stroke-width="0.7"/>
       <text x="474.6" y="148" font-size="4.3" font-weight="700">PRO</text>
     </g>
+      {#if units.length > 1}<text x="146" y="151" font-size="14" font-weight="700" fill="#dfe3ea" class="logo">{letter}</text>{/if}
+    </g>
+    {/each}
 
     <!-- ===== X2D housing ===== -->
     <rect x="110" y="244" width="420" height="510" rx="12" fill="url(#pv-body)" stroke="#474c57"/>
@@ -311,11 +326,13 @@
     <text x="494" y="513.5" text-anchor="middle" font-size="6" font-weight="700" fill="#3a3e45">Bambu Lab</text>
     {/if}
   </svg>
-  <SlotHotspots view={[VX, VY, VW, VH]} {bays} {ext} extAt={{ x: EXT.x, y: EXT.y + EXT.r + 8 }} bayY={84} {onslot} />
+  {#each units as { bays, dy }, i (dy)}
+    <SlotHotspots view={[VX, VY, VW, VH]} {bays} ext={i === 0 ? ext : null} extAt={{ x: EXT.x, y: EXT.y + EXT.r + 8 }} bayY={84 - dy} {onslot} />
+  {/each}
 </div>
 
 <style>
-  .stage { position: relative; width: 100%; max-width: calc(min(80vh, 920px) * 690 / 760); margin-inline: auto; aspect-ratio: 690 / 760; user-select: none; container-type: inline-size; }
+  .stage { position: relative; width: 100%; margin-inline: auto; user-select: none; container-type: inline-size; }
   .layer { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .front { pointer-events: none; }
   .plate { position: absolute; overflow: hidden; border-radius: 6px; }

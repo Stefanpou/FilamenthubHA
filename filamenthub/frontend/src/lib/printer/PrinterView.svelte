@@ -49,11 +49,14 @@
   // Optional hardware (Indstillinger → Funktioner): more than one AMS, Filament Track Switch.
   const hw = $derived(d?.hardware || {});
   const multi = $derived(!!hw.multi_ams && ams.length > 1);
-  // The drawing has room for one AMS: with several, a tab per unit; follows the unit that is feeding until one is picked.
+  // The X2D drawing stacks every AMS; the generic drawing has room for one: a tab per unit there, following the unit
+  // that is feeding until one is picked.
   let pickedUnit = $state(null);
   const unitShown = $derived(multi ? (ams.some((u) => u.unit === pickedUnit) ? pickedUnit : (slots.find((s) => s.active && s.kind !== 'ext')?.unit ?? ams[0].unit)) : ams[0]?.unit);
   const unit0 = $derived(ams.find((u) => u.unit === unitShown) || ams[0] || null);
-  const drawSlots = $derived(multi ? slots.filter((s) => s.kind === 'ext' || s.unit === unitShown) : slots);
+  const tabs = $derived(multi && family !== 'h2');
+  // feature off: only the first AMS is drawn (as before); on: the X2D drawing stacks them all, others get tabs
+  const drawSlots = $derived(multi && !tabs ? slots : slots.filter((s) => s.kind !== 'ams' || s.unit === (multi ? unitShown : (unit0?.unit ?? s.unit))));
   const unitName = (u) => (u.unit >= 128 ? `HT ${u.unit - 127}` : `AMS ${String.fromCharCode(65 + u.unit)}`);
   const sideName = (n) => (n === 1 ? 'venstre dyse' : n === 0 ? 'højre dyse' : n === 'switch' ? 'Track Switch' : '');
   const slotName = (k) => slots.find((s) => s.key === k)?.label || k;
@@ -104,7 +107,7 @@
     {/if}
   </div>
 
-  {#if multi}
+  {#if tabs}
     <div class="units" role="tablist" aria-label="AMS på tegningen">
       {#each ams as u (u.unit)}
         <button role="tab" aria-selected={u.unit === unitShown} class:on={u.unit === unitShown} onclick={() => (pickedUnit = u.unit)}>

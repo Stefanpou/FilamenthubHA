@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.26
+
+- X2D-tegningen viser nu alle AMS'er stablet oven på hinanden (A nederst, B ovenpå) med gram på hver bakke, når »Flere AMS'er« er slået til. Fanerne bruges kun ved andre printermodeller.
+- X2D drawing stacks every AMS unit when multi-AMS is on; tabs remain for the generic drawing.
+
 ## 0.3.25
 
 - Fejlfindingssiden viser nu også Track Switch-data og AMS-enhedernes info.
