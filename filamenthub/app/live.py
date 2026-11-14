@@ -915,6 +915,9 @@ def printer_debug():
     ams = st.get("ams") or {}
     return JSONResponse({
         "extruder": (st.get("device") or {}).get("extruder"),
+        "fila_switch": (st.get("device") or {}).get("fila_switch"),
+        "device_keys": sorted((st.get("device") or {}).keys()),
+        "ams_units": [{k: u.get(k) for k in ("id", "info", "humidity", "temp", "dry_time")} for u in ams.get("ams") or []],
         "ams": {k: v for k, v in ams.items() if k != "ams"},
         "trays": [{"unit": u.get("id"), "tray": [{k: t.get(k) for k in ("id", "state", "remain", "tray_type", "tray_color")}
                                                  for t in u.get("tray") or []]} for u in ams.get("ams") or []],

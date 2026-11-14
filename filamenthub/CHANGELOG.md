@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.25
+
+- Fejlfindingssiden viser nu også Track Switch-data og AMS-enhedernes info.
+- Diagnostics endpoint also returns device.fila_switch and per-unit AMS info.
+
 ## 0.3.24
 
 - Nye valgfrie funktioner under Indstillinger → Funktioner → Udstyr, begge slået fra som standard:
