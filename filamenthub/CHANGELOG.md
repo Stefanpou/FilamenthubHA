@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.24
+
+- Nye valgfrie funktioner under Indstillinger → Funktioner → Udstyr, begge slået fra som standard:
+  - »Flere AMS'er«: printertegningen får en fane pr. AMS (følger selv den AMS, der fører filament), og fugt, temperatur og tilsluttet dyse vises for hver AMS. Slots, forbrug og lager har altid fulgt alle AMS'er.
+  - »Filament Track Switch«: viser hvilken bakke der sidder i hver indgang, og hvilken dyse den fører til. Printerens Track Switch-data bruges også til at vide, hvilken dyse en rulle kører i.
+- Optional hardware settings: several AMS units (tabs on the printer drawing, per-unit humidity/nozzle) and the Filament Track Switch (device.fila_switch inputs/outputs).
+
 ## 0.3.23
 
 - Når en rulle løber tør, og AMS'en fortsætter fra en reserverulle med samme filament, vises forbruget nu live på den nye rulle fra skiftet og frem (før blev det ved med at stå på den tomme rulle, så intet blev vist).

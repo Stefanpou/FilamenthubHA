@@ -83,6 +83,12 @@
     </div>
     {#if imp?.error && !imp.running}<span class="tiny muted">{imp.error}</span>{/if}
   {/if}
+
+  <div class="eyebrow" style="margin-top:8px">Udstyr</div>
+  <label class="row sw"><input type="checkbox" checked={ft.multi_ams} onchange={(e) => flip('multi_ams', e.target.checked)}>
+    <span><b>Flere AMS'er</b><br><span class="tiny muted">Til når der sidder mere end én AMS på printeren: tegningen får en fane pr. AMS (den der fører filament vælges selv), og fugt, temperatur og tilsluttet dyse vises for hver. Slots, forbrug og lager følger alle AMS'er uanset indstillingen.</span></span></label>
+  <label class="row sw"><input type="checkbox" checked={ft.track_switch} onchange={(e) => flip('track_switch', e.target.checked)}>
+    <span><b>Filament Track Switch</b><br><span class="tiny muted">Viser hvilken bakke der sidder i hver af Track Switch'ens to indgange, og hvilken dyse den fører til.</span></span></label>
 </div>
 {:else}<div class="skeleton" style="height:120px"></div>{/if}
 

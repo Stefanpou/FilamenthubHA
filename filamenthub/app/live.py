@@ -303,6 +303,9 @@ def feed_map(state: dict) -> dict[str, int]:
 def slots_block(state: dict, modules: dict, assignments: dict, spools: dict) -> list[dict]:
     parsed = parse_slots(state, modules) if state else []
     feeds = feed_map(state)
+    for i in (track_switch_block(state) or {}).get("inputs", []):   # routed through a track switch: its output
+        if i["slot"] and i["nozzle"] is not None:
+            feeds.setdefault(i["slot"], i["nozzle"])
     act = active_nozzle(state)
     ext = [s for s in parsed if s.kind == "ext"]
     keep_ext = None
@@ -358,6 +361,7 @@ def ams_block(state: dict, modules: dict, hint: str = "AMS") -> list[dict]:
     """Per AMS unit. `humidity` is a real percentage (AMS 2 Pro / HT report `humidity_raw`), `humidity_level` the 1-5
     index every AMS reports (AMS 1 / lite have nothing else; 5 = driest)."""
     out = []
+    dual = len(parse_nozzles(state)) > 1     # the attached-nozzle bits only mean something on X2D/H2D
     for u in sorted((state.get("ams") or {}).get("ams") or [], key=lambda x: int(x.get("id", 0) or 0)):
         try:
             uid = int(u.get("id"))
@@ -370,12 +374,56 @@ def ams_block(state: dict, modules: dict, hint: str = "AMS") -> list[dict]:
             "humidity": int(hum_raw) if hum_raw is not None and hum_raw > 0 else None,
             "humidity_level": level if 1 <= level <= 5 else None,
             "temp": _num(u.get("temp")),
+            **({"nozzle": ams_nozzle(u)} if dual else {}),
         })
     return out
 
 
+def ams_nozzle(unit: dict) -> int | str | None:
+    """Nozzle an AMS unit is attached to (X2D/H2D, bits 8-11 of its `info`): 0 right, 1 left, "switch" = routed
+    through a Filament Track Switch; None on single-nozzle printers / unknown."""
+    try:
+        n = (int(str(unit.get("info")), 16) >> 8) & 0xF
+    except (TypeError, ValueError):
+        return None
+    return n if n in (0, 1) else "switch" if n == 0xE else None
+
+
+def _snow_slot(v) -> str | None:
+    """Slot key for a value encoded like extruder `snow` (unit << 8 | tray); None for empty / unknown."""
+    try:
+        v = int(v)
+    except (TypeError, ValueError):
+        return None
+    if v < 0 or v == 0xFFFF:
+        return None
+    unit, tray = v >> 8, v & 0xFF
+    if unit in (254, 255):
+        return f"ext:{unit}"
+    if 128 <= unit < 136:
+        return f"ams:{unit}:0"
+    if unit < 4 and tray < 4:
+        return f"ams:{unit}:{tray}"
+    return None
+
+
+def track_switch_block(state: dict) -> dict | None:
+    """Filament Track Switch (device.fila_switch): which tray sits at each of its inputs and the nozzle each input
+    feeds. None when the printer reports none."""
+    fs = (state.get("device") or {}).get("fila_switch")
+    if not isinstance(fs, dict) or not fs:
+        return None
+    ins = fs.get("in") if isinstance(fs.get("in"), list) else []
+    outs = fs.get("out") if isinstance(fs.get("out"), list) else []
+    inputs = []
+    for i, v in enumerate(ins):
+        o = outs[i] if i < len(outs) else None
+        inputs.append({"input": i, "slot": _snow_slot(v), "nozzle": o if o in (0, 1) else None})
+    return {"inputs": inputs}
+
+
 def build_snapshot(state: dict, modules: dict | None, device: dict | None, assignments: dict | None,
-                   spools: dict | None, online: bool, model: dict | None = None) -> dict:
+                   spools: dict | None, online: bool, model: dict | None = None, hardware: dict | None = None) -> dict:
     """Pure function: everything the dashboard shows, from the accumulated printer state."""
     modules = modules or {}
     state = state or {}
@@ -385,6 +433,8 @@ def build_snapshot(state: dict, modules: dict | None, device: dict | None, assig
         "slots": slots_block(state, modules, assignments or {}, spools or {}),
         "ams": ams_block(state, modules, ams_model_hint(model_name((device or {}).get("model"), (device or {}).get("serial")))),
         "model": model or empty_model(),
+        "track_switch": track_switch_block(state),
+        "hardware": dict(hardware or {"multi_ams": False, "track_switch": False}),
     }
 
 
@@ -754,7 +804,13 @@ def make_snapshot(engine=None) -> dict:
         assignments = {}
     job, kind = current_job(engine)
     model = models.info(job, engine, kind)
-    return build_snapshot(state, modules, engine.device, assignments, _spools_by_id(), online, model)
+    try:
+        from .features import settings as feature_settings
+        f = feature_settings(engine.db)
+        hardware = {"multi_ams": bool(f.get("multi_ams")), "track_switch": bool(f.get("track_switch"))}
+    except Exception:
+        hardware = None
+    return build_snapshot(state, modules, engine.device, assignments, _spools_by_id(), online, model, hardware)
 
 
 def shared_snapshot(max_age: float = 0.7) -> tuple[dict, str]:

@@ -36,7 +36,8 @@ router = APIRouter()
 
 KEY = "features"
 DEFAULTS = {"plug": False, "plug_entity": "", "auto_off": False, "off_delay_min": 10, "off_max_temp": 50,
-            "photo": False, "camera_entity": "", "library": False, "live_camera": False}
+            "photo": False, "camera_entity": "", "library": False, "live_camera": False,
+            "multi_ams": False, "track_switch": False}
 WATCH = 10.0                 # seconds between looks at the printer state
 ARCHIVE_TRIES = (60, 120, 300, 600, 1200, 1800)   # Bambu Cloud lists a task a little after it ends
 PHOTO_TRIES = (0, 20, 60, 180, 300)   # seconds after the end: the Bambu camera in HA often fails right at the finish
@@ -343,6 +344,8 @@ class FeaturesIn(BaseModel):
     camera_entity: str | None = Field(default=None, max_length=200)
     library: bool | None = None
     live_camera: bool | None = None
+    multi_ams: bool | None = None
+    track_switch: bool | None = None
 
 
 @router.get("/api/features")

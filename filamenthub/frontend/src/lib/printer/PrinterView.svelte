@@ -46,7 +46,18 @@
   const noz = (i) => p?.nozzles?.find((n) => n.id === i);
   // X2D/H2D: extruder id 0 is the right nozzle, id 1 the left one (single-nozzle printers: just "Dyse")
   const nozName = (i) => ((p?.nozzles?.length || 0) < 2 ? 'Dyse' : i === 1 ? 'Venstre dyse' : i === 0 ? 'Højre dyse' : `Dyse ${i + 1}`);
-  const unit0 = $derived(ams[0] || null);
+  // Optional hardware (Indstillinger → Funktioner): more than one AMS, Filament Track Switch.
+  const hw = $derived(d?.hardware || {});
+  const multi = $derived(!!hw.multi_ams && ams.length > 1);
+  // The drawing has room for one AMS: with several, a tab per unit; follows the unit that is feeding until one is picked.
+  let pickedUnit = $state(null);
+  const unitShown = $derived(multi ? (ams.some((u) => u.unit === pickedUnit) ? pickedUnit : (slots.find((s) => s.active && s.kind !== 'ext')?.unit ?? ams[0].unit)) : ams[0]?.unit);
+  const unit0 = $derived(ams.find((u) => u.unit === unitShown) || ams[0] || null);
+  const drawSlots = $derived(multi ? slots.filter((s) => s.kind === 'ext' || s.unit === unitShown) : slots);
+  const unitName = (u) => (u.unit >= 128 ? `HT ${u.unit - 127}` : `AMS ${String.fromCharCode(65 + u.unit)}`);
+  const sideName = (n) => (n === 1 ? 'venstre dyse' : n === 0 ? 'højre dyse' : n === 'switch' ? 'Track Switch' : '');
+  const slotName = (k) => slots.find((s) => s.key === k)?.label || k;
+  const ts = $derived(hw.track_switch ? (d?.track_switch || { inputs: [] }) : null);
   const family = $derived(printerFamily(p));
   // The API gives "/api/printer/..."; relative keeps it under the Home Assistant Ingress prefix (<base href>).
   const rel = (u) => (u ? u.replace(/^\//, '') : u);
@@ -93,6 +104,14 @@
     {/if}
   </div>
 
+  {#if multi}
+    <div class="units" role="tablist" aria-label="AMS på tegningen">
+      {#each ams as u (u.unit)}
+        <button role="tab" aria-selected={u.unit === unitShown} class:on={u.unit === unitShown} onclick={() => (pickedUnit = u.unit)}>
+          {unitName(u)}{#if slots.some((s) => s.active && s.unit === u.unit && s.kind !== 'ext')}<i class="feed" title="Fører filament nu"></i>{/if}</button>
+      {/each}
+    </div>
+  {/if}
   <div class="frame glass">
     {#snippet canvas()}
       <ModelCanvas modelUrl={rel(model?.model_url)} coverUrl={rel(model?.cover_url)} taskKey={model?.task_id || ''}
@@ -100,9 +119,9 @@
         layer={busy ? p?.layer || 0 : 0} totalLayers={busy ? p?.total_layers || 0 : 0} percent={busy ? pct : null} />
     {/snippet}
     {#if family === 'h2'}
-      <PrinterSvg printer={p} {slots} {tone} progress={shownProgress} {still} {onslot}>{@render canvas()}</PrinterSvg>
+      <PrinterSvg printer={p} slots={drawSlots} {tone} progress={shownProgress} {still} {onslot}>{@render canvas()}</PrinterSvg>
     {:else}
-      <PrinterSvgGeneric printer={p} {slots} {tone} progress={shownProgress} {still} {family} amsModel={unit0?.model || ''} {onslot}>{@render canvas()}</PrinterSvgGeneric>
+      <PrinterSvgGeneric printer={p} slots={drawSlots} {tone} progress={shownProgress} {still} {family} amsModel={unit0?.model || ''} {onslot}>{@render canvas()}</PrinterSvgGeneric>
     {/if}
     {#if live.status !== 'live' && !p}
       <div class="banner muted">{live.status === 'unauthorized' ? 'Log ind for at se printeren' : 'Forbinder til printeren …'}</div>
@@ -122,8 +141,15 @@
       <div class="card"><span class="k">Hastighed</span><b>{SPEEDS[p.speed_level] || '–'}</b></div>
       <div class="card"><span class="k">Blæser</span><b class="mono">{p.fan_pct == null ? '–' : p.fan_pct + '%'}</b></div>
       <div class="card"><span class="k">Lys</span><b>{p.light == null ? '–' : p.light ? 'Tændt' : 'Slukket'}</b></div>
-      {#if unit0}
-        <div class="card"><span class="k">{unit0.model}</span><b class="mono">{#if unit0.humidity == null && unit0.humidity_level == null && unit0.temp == null}<small>ingen måling</small>{:else}{unit0.humidity != null ? unit0.humidity + '%' : unit0.humidity_level != null ? 'Fugt ' + humidityText(unit0) : '–'}{#if unit0.temp != null} <small>·</small> {unit0.temp}<small>°</small>{/if}{/if}</b></div>
+      {#each multi ? ams : unit0 ? [unit0] : [] as u (u.unit)}
+        <div class="card"><span class="k">{multi ? `${unitName(u)} · ${u.model}` : u.model}{#if multi && sideName(u.nozzle)}{' → '}{sideName(u.nozzle)}{/if}</span><b class="mono">{#if u.humidity == null && u.humidity_level == null && u.temp == null}<small>ingen måling</small>{:else}{u.humidity != null ? u.humidity + '%' : u.humidity_level != null ? 'Fugt ' + humidityText(u) : '–'}{#if u.temp != null} <small>·</small> {u.temp}<small>°</small>{/if}{/if}</b></div>
+      {/each}
+      {#if ts}
+        <div class="card ts"><span class="k">Filament Track Switch</span>
+          {#if ts.inputs.length}
+            {#each ts.inputs as i (i.input)}<span class="small">Indgang {i.input + 1}: <b class="mono">{i.slot ? slotName(i.slot) : 'tom'}</b>{#if i.slot && sideName(i.nozzle)}{' → '}{sideName(i.nozzle)}{/if}</span>{/each}
+          {:else}<small>Printeren melder ingen Track Switch endnu</small>{/if}
+        </div>
       {/if}
     </div>
   {/if}
@@ -187,6 +213,14 @@
   .card.hot { border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
   .card.hot b { color: var(--warn); }
   .k { font-size: 12px; color: var(--muted); }
+  .units { display: flex; gap: 6px; padding: 0 4px; flex-wrap: wrap; }
+  .units button { all: unset; cursor: pointer; padding: 4px 12px; border-radius: 8px; font-size: 13px; color: var(--muted);
+    border: 1px solid var(--panel-border); background: var(--panel); display: inline-flex; align-items: center; gap: 6px; }
+  .units button.on { color: var(--text); background: var(--panel-hi); border-color: var(--panel-border-hi); }
+  .units button:focus-visible { outline: 2px solid var(--accent); }
+  .units .feed { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .card.ts { grid-column: span 2; }
+  .card.ts b { font-size: 14px; }
   .card b { font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
   .card small { font-size: 12px; color: var(--muted); font-weight: 500; }
 
