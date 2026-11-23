@@ -9,7 +9,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import config, parse
+from . import config, parse, prints
 from .db import Database
 
 log = logging.getLogger("modelbank.library")
@@ -162,6 +162,7 @@ def scan(db: Database) -> dict:
 def _drop_cache(mid: int) -> None:
     thumb_path(mid).unlink(missing_ok=True)
     mesh_path(mid).unlink(missing_ok=True)
+    prints.drop_photos(mid)
 
 
 def unique_target(folder: str, name: str) -> Path:

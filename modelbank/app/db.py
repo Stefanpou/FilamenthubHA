@@ -28,6 +28,14 @@ CREATE TABLE IF NOT EXISTS models (
   manual TEXT NOT NULL DEFAULT '{}'
 );
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS prints (
+  model_id INTEGER NOT NULL,
+  task_id TEXT NOT NULL,
+  data TEXT NOT NULL DEFAULT '{}',
+  end_ts REAL,
+  photo INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (model_id, task_id)
+);
 """
 JSON_COLS = ("meta", "tags", "links", "unlinks", "manual")
 EDITABLE = ("name", "tags", "notes", "designer", "source_url", "favorite", "links", "unlinks", "manual")
@@ -109,4 +117,38 @@ class Database:
     def delete(self, mid: int) -> None:
         with self.lock:
             self.conn.execute("DELETE FROM models WHERE id=?", (mid,))
+            self.conn.execute("DELETE FROM prints WHERE model_id=?", (mid,))
+            self.conn.commit()
+
+    # ---- prints of a model (kept even when FilamentHub forgets them)
+    def prints(self, mid: int) -> list[dict]:
+        with self.lock:
+            rows = self.conn.execute("SELECT task_id, data, end_ts, photo FROM prints WHERE model_id=? "
+                                     "ORDER BY COALESCE(end_ts, 0) DESC, task_id DESC", (mid,)).fetchall()
+        return [{**json.loads(r["data"]), "task_id": r["task_id"], "end": r["end_ts"], "photo": bool(r["photo"])} for r in rows]
+
+    def print_counts(self) -> dict[int, dict]:
+        """{model id: {"n": prints, "photo": newest task id with a photo}}"""
+        out: dict[int, dict] = {}
+        with self.lock:
+            for r in self.conn.execute("SELECT model_id, task_id, photo FROM prints ORDER BY COALESCE(end_ts, 0) DESC"):
+                d = out.setdefault(r["model_id"], {"n": 0, "photo": None})
+                d["n"] += 1
+                if r["photo"] and not d["photo"]:
+                    d["photo"] = r["task_id"]
+        return out
+
+    def upsert_print(self, mid: int, row: dict, photo: bool | None = None) -> None:
+        data = json.dumps({k: v for k, v in row.items() if k not in ("task_id", "end", "photo")})
+        with self.lock:
+            self.conn.execute(
+                "INSERT INTO prints(model_id, task_id, data, end_ts, photo) VALUES(?, ?, ?, ?, ?) "
+                "ON CONFLICT(model_id, task_id) DO UPDATE SET data=excluded.data, end_ts=excluded.end_ts"
+                + (", photo=excluded.photo" if photo is not None else ""),
+                (mid, row["task_id"], data, row.get("end"), int(bool(photo))))
+            self.conn.commit()
+
+    def delete_print(self, mid: int, task_id: str) -> None:
+        with self.lock:
+            self.conn.execute("DELETE FROM prints WHERE model_id=? AND task_id=?", (mid, task_id))
             self.conn.commit()

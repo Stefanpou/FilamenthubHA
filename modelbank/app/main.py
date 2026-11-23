@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
-from . import config, filamenthub as fhm, library
+from . import config, filamenthub as fhm, library, prints
 from .db import Database
 
 logging.basicConfig(level=config.LOG_LEVEL, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -22,14 +22,17 @@ STATIC = Path(__file__).parent / "static" / "dist"
 db = Database(config.DATA_DIR / "modelbank.db")
 fh = fhm.Client(db)
 scanner = library.Scanner(db)
+print_sync = prints.PrintSync(db, fh)
 DEFAULT_MARGIN = {"mode": "pct", "pct": 50, "fixed": None, "kg_price": 120}
 
 
 @asynccontextmanager
 async def lifespan(app):
     scanner.start()
+    print_sync.start()
     yield
     scanner.stop()
+    print_sync.stop()
 
 
 app = FastAPI(title="Modelbank", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
@@ -66,15 +69,16 @@ def _folder_of(m: dict) -> str:
     return m["relpath"].rsplit("/", 1)[0] if "/" in m["relpath"] else ""
 
 
-def _card(m: dict, printed: int | None = None) -> dict:
+def _card(m: dict, pc: dict | None = None) -> dict:
     meta = m["meta"] or {}
+    pc = pc if pc is not None else db.print_counts().get(m["id"]) or {}
     return {"id": m["id"], "name": m["name"], "file": m["relpath"].rsplit("/", 1)[-1], "folder": _folder_of(m),
             "relpath": m["relpath"], "size": m["size"], "added": m["added"], "mtime": m["mtime"],
             "kind": meta.get("kind"), "tags": m["tags"], "favorite": m["favorite"], "designer": m["designer"],
             "thumb": m["thumb"], "mesh": bool(meta.get("mesh")), "grams": _grams(m), "seconds": _seconds(m),
             "filaments": [{"type": f.get("type"), "color": f.get("color")} for f in meta.get("filaments") or []],
             "plates": len(meta.get("plates") or []) or 1, "dims": meta.get("dims"), "error": meta.get("error"),
-            "printed": printed}
+            "printed": pc.get("n", 0), "photo": pc.get("photo")}
 
 
 def _grams(m: dict):
@@ -101,7 +105,7 @@ def list_models(q: str = Query("", max_length=200), folder: str | None = Query(N
                 tag: str = Query("", max_length=100), favorite: bool = False,
                 sort: Literal["added", "name", "printed", "size"] = "added", sub: bool = True):
     rows = db.models()
-    entries, fh_error = _library_or_none()
+    counts = db.print_counts()
     words = [w for w in q.lower().split() if w]
     out = []
     for m in rows:
@@ -121,15 +125,15 @@ def list_models(q: str = Query("", max_length=200), folder: str | None = Query(N
                              meta.get("title") or ""]).lower()
             if not all(w in text for w in words):
                 continue
-        printed = len(fhm.history_for(m, entries)) if entries is not None else None
-        out.append(_card(m, printed))
+        out.append(_card(m, counts.get(m["id"]) or {}))
     if sort == "name":
         out.sort(key=lambda c: c["name"].lower())
     elif sort == "printed":
         out.sort(key=lambda c: -(c["printed"] or 0))
     elif sort == "size":
         out.sort(key=lambda c: -c["size"])
-    return {"items": out, "total": len(out), "fh_error": fh_error, "last_scan": db.get("last_scan")}
+    return {"items": out, "total": len(out), "fh_error": print_sync.error if fh.configured() else None,
+            "last_scan": db.get("last_scan")}
 
 
 def _margin() -> dict:
@@ -143,17 +147,30 @@ def _detail(m: dict, margin_override: dict | None = None, copies: int = 1) -> di
            "meta": {k: meta.get(k) for k in ("title", "description", "plates", "filaments", "sliced", "triangles",
                                               "mesh_error", "dims", "kind")},
            "fh": {"configured": fh.configured(), "error": None}, "stock": None, "history": None, "price": None}
-    if not fh.configured():
-        return out
-    try:
-        spools = fh.spools()
-        entries = fh.library()
-    except fhm.FHError as e:
-        out["fh"]["error"] = str(e)
-        return out
-    hist = fhm.history_for(m, entries)
+    entries: list[dict] = []
+    spools = None
+    if fh.configured():
+        try:
+            spools = fh.spools()
+            entries = fh.library()
+            prints.sync(db, fh, only=m["id"], entries=entries)
+            m = db.model(m["id"])
+        except fhm.FHError as e:
+            out["fh"]["error"] = str(e)
+        except OSError as e:
+            log.info("sync %s: %s", m["id"], e)
+    live = {str(e.get("task_id")): e for e in entries}
+    hist = []
+    for p in db.prints(m["id"]):
+        e = live.get(p["task_id"]) or {}
+        hist.append({**p, "energy": e.get("energy"), "spools": e.get("spools") or [], "in_fh": bool(e)})
     out["history"] = hist
+    out["links"] = m["links"]
     out["printed"] = len(hist)
+    out["photos"] = [{"task_id": h["task_id"], "end": h.get("end"), "title": h.get("title"), "plate": h.get("plate")}
+                     for h in hist if h.get("photo")]
+    if spools is None:
+        return out
     fils = [dict(f) for f in meta.get("filaments") or []]
     man = m["manual"] or {}
     last = next((h for h in hist if h.get("status") == "finish" and h.get("weight")), None)
@@ -292,7 +309,7 @@ def link_print(mid: int, body: LinkBody):
         links.discard(body.task_id)
         unlinks.add(body.task_id)
     db.set_fields(mid, {"links": sorted(links), "unlinks": sorted(unlinks)})
-    return _detail(_model(mid))
+    return _detail(_model(mid))   # _detail syncs this model: stores the print + photo, or drops them
 
 
 @app.get("/api/models/{mid}/file")
@@ -320,6 +337,19 @@ def model_thumb(mid: int):
     if not p.is_file():
         raise HTTPException(404, "Intet billede")
     return FileResponse(p, media_type="image/png", headers={"Cache-Control": "private, max-age=600"})
+
+
+@app.get("/api/models/{mid}/photos/{task_id}.jpg")
+def model_photo(mid: int, task_id: str):
+    _model(mid)
+    try:
+        p = prints.photo_path(mid, task_id)
+    except ValueError:
+        raise HTTPException(404, "Findes ikke")
+    if not p.is_file():
+        raise HTTPException(404, "Intet foto")
+    media = "image/png" if p.read_bytes()[:4] == b"\x89PNG" else "image/jpeg"
+    return FileResponse(p, media_type=media, headers={"Cache-Control": "private, max-age=86400"})
 
 
 @app.post("/api/models/{mid}/thumb")
@@ -355,13 +385,20 @@ async def upload(request: Request, name: str = Query(min_length=1, max_length=30
         _err(e)
     finally:
         tmp.unlink(missing_ok=True)
+    # a file added after it was printed: link it to those prints (and fetch their photos) right away
+    try:
+        await run_in_threadpool(prints.sync, db, fh, mid)
+    except (fhm.FHError, OSError) as e:
+        log.info("upload sync: %s", e)
     return _card(db.model(mid))
 
 
 @app.post("/api/scan")
 def scan_now():
     fh.clear()
-    return library.scan(db)
+    r = library.scan(db)
+    print_sync.kick()
+    return r
 
 
 @app.get("/api/folders")

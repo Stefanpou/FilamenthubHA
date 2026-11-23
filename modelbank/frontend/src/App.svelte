@@ -92,7 +92,7 @@
 
   const folderLabel = $derived(folder === null ? 'Alle modeller' : folder === '' ? 'Rodmappen' : folder.split('/').pop());
   const depth = (p) => p.split('/').length - 1;
-  const thumbSrc = (it) => `api/models/${it.id}/thumb?v=${bust[it.id] || it.mtime}`;
+  const thumbSrc = (it) => (it.photo ? `api/models/${it.id}/photos/${it.photo}.jpg` : `api/models/${it.id}/thumb?v=${bust[it.id] || it.mtime}`);
 </script>
 
 <svelte:window ondragenter={onEnter} ondragleave={onLeave} ondragover={onOver} ondrop={onDrop} />
@@ -154,7 +154,7 @@
           {#each items as it, i (it.id)}
             <a class="card glass rise" style="--i:{i}" href={`#/m/${it.id}`}>
               <div class="pic">
-                {#if it.thumb && !broken[it.id]}<img src={thumbSrc(it)} alt="" loading="lazy" onerror={() => (broken[it.id] = true)}>{:else}<div class="ph"><span class="badge">{it.kind === 'stl' ? 'STL' : '3MF'}</span></div>{/if}
+                {#if (it.photo || it.thumb) && !broken[it.id]}<img class:photo={it.photo} src={thumbSrc(it)} alt="" loading="lazy" onerror={() => (broken[it.id] = true)}>{:else}<div class="ph"><span class="badge">{it.kind === 'stl' ? 'STL' : '3MF'}</span></div>{/if}
                 {#if it.printed}<span class="badge accent pr">Printet {it.printed}×</span>{/if}
                 {#if it.favorite}<span class="star">★</span>{/if}
               </div>
@@ -229,6 +229,7 @@
   .card:hover { border-color: var(--panel-border-hi); transform: translateY(-2px); }
   .pic { position: relative; aspect-ratio: 1; background: radial-gradient(120% 90% at 50% 20%, #202227 0%, #141517 75%); }
   .pic img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .pic img.photo { object-fit: cover; }
   .ph { position: absolute; inset: 0; display: grid; place-items: center; }
   .pr { position: absolute; left: 8px; top: 8px; }
   .star { position: absolute; right: 10px; top: 6px; color: #f3c14b; font-size: 18px; }

@@ -180,33 +180,58 @@ def stock_for(filaments: list[dict], spools: list[dict]) -> list[dict]:
 
 # ----------------------------------------------------------------------------- print history
 def norm(s: str) -> str:
-    s = (s or "").lower()
-    s = re.sub(r"\.(gcode\.)?(3mf|stl|gcode)$", "", s.strip())
-    s = re.sub(r"[_\-.()\[\]]+", " ", s)
+    """Compact comparable name: lower case letters and digits only, without .3mf/.stl/.gcode and 'plate N'.
+    'PowK+_holder_31jul22.3mf' and 'PowK_holder_31jul22' -> 'powkholder31jul22'."""
+    s = (s or "").lower().strip()
+    s = re.sub(r"\.(gcode\.)?(3mf|stl|gcode)$", "", s)
     s = re.sub(r"\bplate\s*\d+\b", " ", s)
-    return re.sub(r"\s+", " ", s).strip()
+    return re.sub(r"[^0-9a-zæøå]+", "", s)
 
 
-def history_for(model: dict, entries: list[dict]) -> list[dict]:
-    """Prints in FilamentHub's library that belong to this model: linked by hand, or same (normalised) name as the
-    model, its file or its 3MF title. Entries unlinked by hand are left out."""
-    links, unlinks = set(model.get("links") or []), set(model.get("unlinks") or [])
-    names = {norm(model.get("name") or ""), norm((model.get("relpath") or "").rsplit("/", 1)[-1]),
-             norm((model.get("meta") or {}).get("title") or "")} - {""}
-    out = []
+MIN_PREFIX = 6
+
+
+def model_keys(model: dict) -> set[str]:
+    return {norm(model.get("name") or ""), norm((model.get("relpath") or "").rsplit("/", 1)[-1]),
+            norm((model.get("meta") or {}).get("title") or "")} - {""}
+
+
+def match_score(keys: set[str], entry: dict) -> int:
+    """0 = not this model. Same name as the print's title, MakerWorld design or file: 10000 + length. Bambu names a
+    print '<project>_<plate name>', so a title that starts with the model's name also counts: its length."""
+    names = {norm(entry.get("title") or ""), norm(entry.get("design_title") or ""), norm(entry.get("file_name") or "")} - {""}
+    best = 0
+    for k in keys:
+        if k in names:
+            best = max(best, 10000 + len(k))
+        elif len(k) >= MIN_PREFIX and any(n.startswith(k) for n in names):
+            best = max(best, len(k))
+    return best
+
+
+def auto_matches(models: list[dict], entries: list[dict]) -> dict[int, set[str]]:
+    """{model id: task ids} - each print goes to the model(s) whose name fits it best (exact beats prefix, longer
+    beats shorter), so 'Benchy' and 'Benchy v2' do not both get every Benchy print."""
+    keys = {m["id"]: model_keys(m) for m in models}
+    out: dict[int, set[str]] = {}
     for e in entries:
-        tid = str(e.get("task_id"))
-        if tid in unlinks:
+        tid = str(e.get("task_id") or "")
+        if not tid:
             continue
-        keys = {norm(e.get("title") or ""), norm(e.get("design_title") or ""), norm(e.get("file_name") or "")} - {""}
-        if tid in links or names & keys:
-            out.append({"task_id": tid, "title": e.get("title") or "", "end": e.get("end"), "status": e.get("status"),
-                        "weight": e.get("weight"), "seconds": e.get("seconds"), "plate": e.get("plate"),
-                        "has_photo": e.get("has_photo"), "has_cover": e.get("has_cover"),
-                        "linked": tid in links, "energy": e.get("energy"),
-                        "materials": e.get("materials") or [], "spools": e.get("spools") or []})
-    out.sort(key=lambda x: x.get("end") or 0, reverse=True)
+        scores = {mid: match_score(k, e) for mid, k in keys.items()}
+        top = max(scores.values(), default=0)
+        if top <= 0:
+            continue
+        for mid, sc in scores.items():
+            if sc == top:
+                out.setdefault(mid, set()).add(tid)
     return out
+
+
+def print_row(e: dict) -> dict:
+    return {"task_id": str(e.get("task_id")), "title": e.get("title") or "", "end": e.get("end"), "status": e.get("status"),
+            "weight": e.get("weight"), "seconds": e.get("seconds"), "plate": e.get("plate"),
+            "materials": e.get("materials") or []}
 
 
 # ----------------------------------------------------------------------------- price

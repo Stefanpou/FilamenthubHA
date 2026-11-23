@@ -9,6 +9,7 @@
   let tagText = $state(''), pick = $state(null), pickQ = $state(''), confirmDel = $state(false);
   let copies = $state(1), pct = $state(''), mode = $state('pct'), fixed = $state('');
   let man = $state({ grams: '', minutes: '', material: '' });
+  let view = $state(null), big = $state(-1);   // view: 'photo' | '3d'; big: index of the photo shown large
 
   async function load() {
     err = '';
@@ -61,6 +62,17 @@
   const STATUS = { ok: ['ok', 'På lager'], color: ['warn', 'Anden farve'], low: ['danger', 'For lidt'],
                    missing: ['danger', 'Ikke på lager'], unknown: ['shadow', 'Mængde ukendt'] };
   const photo = (h) => `api/fh/print/${h.task_id}/${h.has_photo ? 'photo.jpg' : 'cover.png'}`;
+  const myPhoto = (tid) => `api/models/${id}/photos/${tid}.jpg`;
+  const photos = $derived(m?.photos || []);
+  const shown = $derived(view || (photos.length ? 'photo' : '3d'));
+  let sel = $state(0);
+  $effect(() => { if (sel >= photos.length) sel = 0; });
+  function keys(e) {
+    if (big < 0) return;
+    if (e.key === 'Escape') big = -1;
+    if (e.key === 'ArrowRight') big = (big + 1) % photos.length;
+    if (e.key === 'ArrowLeft') big = (big - 1 + photos.length) % photos.length;
+  }
   const colors = $derived(Object.fromEntries((m?.meta?.filaments || []).filter((f) => f.color).map((f) => [String(f.id), f.color])));
   const linkedIds = $derived(new Set((m?.history || []).map((h) => h.task_id)));
 </script>
@@ -95,8 +107,29 @@
 
     <div class="cols">
       <div class="stack">
-        <Viewer url={`api/models/${id}/mesh`} {colors} fallback={m.thumb ? `api/models/${id}/thumb?v=${m.mtime}` : null} />
-        {#if m.meta.mesh_error}<div class="tiny muted">Ingen 3D-geometri i filen ({m.meta.mesh_error}) – viser billedet fra filen.</div>{/if}
+        {#if photos.length}
+          <div class="row seg">
+            <button class="chip" class:on={shown === 'photo'} onclick={() => (view = 'photo')}><Icon name="camera" size={16} /> Fotos ({photos.length})</button>
+            <button class="chip" class:on={shown === '3d'} onclick={() => (view = '3d')}><Icon name="box" size={16} /> 3D</button>
+          </div>
+        {/if}
+        {#if shown === 'photo' && photos.length}
+          {@const p = photos[sel] || photos[0]}
+          <button class="hero" onclick={() => (big = sel)} aria-label="Vis foto i stor størrelse">
+            <img src={myPhoto(p.task_id)} alt={`Foto af printet ${p.title}`}>
+            <span class="cap tiny">{date(p.end)}{p.plate > 1 ? ` · plade ${p.plate}` : ''}</span>
+          </button>
+          {#if photos.length > 1}
+            <div class="strip">
+              {#each photos as ph, i (ph.task_id)}
+                <button class="sthumb" class:on={i === sel} onclick={() => (sel = i)} aria-label={`Foto fra ${date(ph.end)}`}><img src={myPhoto(ph.task_id)} alt="" loading="lazy"></button>
+              {/each}
+            </div>
+          {/if}
+        {:else}
+          <Viewer url={`api/models/${id}/mesh`} {colors} fallback={m.thumb ? `api/models/${id}/thumb?v=${m.mtime}` : null} />
+          {#if m.meta.mesh_error}<div class="tiny muted">Ingen 3D-geometri i filen ({m.meta.mesh_error}) – viser billedet fra filen.</div>{/if}
+        {/if}
 
         <section class="glass pad stack">
           <h2><Icon name="edit" size={20} /> Oplysninger</h2>
@@ -191,11 +224,12 @@
             <div class="hist">
               {#each m.history as h}
                 <div class="h">
-                  {#if h.has_photo || h.has_cover}<img src={photo(h)} alt="" loading="lazy">{:else}<div class="noimg"></div>{/if}
+                  {#if h.photo}<button class="hbtn" onclick={() => { view = 'photo'; big = photos.findIndex((x) => x.task_id === h.task_id); }} aria-label="Vis foto"><img src={myPhoto(h.task_id)} alt="" loading="lazy"></button>{:else}<div class="noimg"></div>{/if}
                   <div class="grow stack" style="gap:2px">
                     <b class="ellipsis">{h.title}{h.plate > 1 ? ` · plade ${h.plate}` : ''}</b>
                     <span class="tiny muted">{date(h.end)} · {num(h.weight, 1)} g · {dur(h.seconds)}{h.status === 'failed' ? ' · fejlede' : ''}</span>
                     {#if h.energy?.cost != null}<span class="tiny muted">Strøm {kr(h.energy.cost)}</span>{/if}
+                    {#if !h.in_fh}<span class="tiny muted">Gemt i Modelbank (slettet i FilamentHub)</span>{/if}
                   </div>
                   <button class="btn ghost small" title="Fjern koblingen" onclick={() => link(h.task_id, false)}><Icon name="close" size={16} /></button>
                 </div>
@@ -229,6 +263,24 @@
         {/each}
       </div>
     </div>
+  </div>
+{/if}
+
+<svelte:window onkeydown={keys} />
+{#if big >= 0 && photos[big]}
+  <div class="scrim lb" role="presentation" onclick={(e) => e.target === e.currentTarget && (big = -1)}>
+    <figure role="dialog" aria-label="Foto">
+      <img src={myPhoto(photos[big].task_id)} alt="">
+      <figcaption class="row between small">
+        <span>{photos[big].title} · {date(photos[big].end)}{photos[big].plate > 1 ? ` · plade ${photos[big].plate}` : ''}</span>
+        <span class="row">
+          {#if photos.length > 1}<button class="btn small" onclick={() => (big = (big - 1 + photos.length) % photos.length)} aria-label="Forrige"><Icon name="back" size={16} /></button>
+          <span class="mono muted">{big + 1}/{photos.length}</span>
+          <button class="btn small" onclick={() => (big = (big + 1) % photos.length)} aria-label="Næste"><Icon name="chev" size={16} /></button>{/if}
+          <button class="btn small" onclick={() => (big = -1)}><Icon name="close" size={16} /> Luk</button>
+        </span>
+      </figcaption>
+    </figure>
   </div>
 {/if}
 
@@ -273,5 +325,18 @@
   .scrim { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.55); display: grid; place-items: center; padding: 16px; }
   .sheet { width: 100%; max-width: 640px; background: var(--panel-solid); }
   details summary { cursor: pointer; }
+  .seg { gap: 6px; }
+  .hero { position: relative; display: block; width: 100%; aspect-ratio: 4 / 3; padding: 0; border: 1px solid var(--panel-border);
+    border-radius: var(--radius); overflow: hidden; background: #0d0e10; cursor: zoom-in; }
+  .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cap { position: absolute; left: 10px; bottom: 10px; background: rgba(0,0,0,.6); padding: 3px 8px; border-radius: 6px; color: #ddd; }
+  .strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .sthumb { flex: none; width: 84px; height: 63px; padding: 0; border-radius: 8px; overflow: hidden; border: 2px solid transparent; background: var(--panel-hi); cursor: pointer; }
+  .sthumb.on { border-color: var(--accent); }
+  .sthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .hbtn { padding: 0; border: 0; background: none; cursor: zoom-in; border-radius: 8px; }
+  .lb figure { margin: 0; max-width: min(1400px, 96vw); display: flex; flex-direction: column; gap: 10px; }
+  .lb figure img { max-width: 100%; max-height: 82vh; object-fit: contain; border-radius: 10px; display: block; margin: 0 auto; }
+  .lb figcaption { color: var(--text-dim); gap: 12px; flex-wrap: wrap; }
   details[open] summary { margin-bottom: 10px; }
 </style>

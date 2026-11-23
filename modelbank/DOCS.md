@@ -29,8 +29,9 @@ der ikke er slicet, får gram og tid fra sidste print af modellen, eller fra de 
 Så viser hver model:
 
 - **Filament og lager:** den rulle der passer bedst (samme materiale, nok tilbage, nærmeste farve).
-- **Printhistorik:** prints fra FilamentHubs printbibliotek med samme navn som modellen. Andre prints kan kobles på
-  med **Kobl print**, og forkerte kan fjernes.
+- **Fotos og printhistorik:** prints fra FilamentHubs printbibliotek med samme navn som modellen (også når filen
+  lægges ind efter printet). Fotoet fra hvert færdigt print gemmes i Modelbank; det nyeste er modellens billede, og
+  alle vises i et galleri. Andre prints kan kobles på med **Kobl print**, og forkerte kan fjernes.
 - **Pris:** filament (rullens kg-pris) + strøm (målt effekt × printtid × elprisen i printvinduet) + avance.
 
 ## Indstillinger
