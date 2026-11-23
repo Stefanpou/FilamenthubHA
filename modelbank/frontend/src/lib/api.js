@@ -34,7 +34,7 @@ export const del = (p) => api(p, { method: 'DELETE' });
 export function upload(file, folder, onProgress) {
   return new Promise((resolve, reject) => {
     const x = new XMLHttpRequest();
-    x.open('POST', `api/upload?name=${encodeURIComponent(file.name)}&folder=${encodeURIComponent(folder || '')}`);
+    x.open('POST', `api/upload?name=${encodeURIComponent(file.name)}&folder=${encodeURIComponent(folder || '')}${file.lastModified ? `&mtime=${Math.floor(file.lastModified / 1000)}` : ''}`);
     x.setRequestHeader('Content-Type', 'application/octet-stream');
     x.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
     x.onload = () => {

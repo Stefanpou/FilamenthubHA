@@ -15,6 +15,9 @@ Modellerne ligger i Home Assistants delte mappe: `/share/modelbank`. Undermapper
 - **Upload:** træk filer ind på siden, eller tryk **Upload modeller**. De lægges i den mappe, du står i.
 - **Samba / fildeling:** læg filer i `share/modelbank`. De dukker op inden for 10 minutter, eller med det samme når du
   trykker **Scan**.
+- **Versioner:** filer i samme mappe, hvis navne starter med de samme ord, vises som ét kort med den nyeste version.
+  Alle versioner ses inde på modellen. Under **Oplysninger** kan en fil tages ud af gruppen eller lægges sammen med en
+  anden model, og **Grupér versioner** øverst slår grupperingen fra.
 - **Slet:** filen flyttes til `share/modelbank/.slettet`, så du kan fortryde. Tøm mappen selv, når du er sikker.
 
 Slicede 3MF-filer fra Bambu Studio / OrcaSlicer giver gram pr. filament, farver og printtid. STL-filer og 3MF-projekter,

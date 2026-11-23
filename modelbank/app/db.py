@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS models (
   links TEXT NOT NULL DEFAULT '[]',
   unlinks TEXT NOT NULL DEFAULT '[]',
   thumb TEXT NOT NULL DEFAULT '',
-  manual TEXT NOT NULL DEFAULT '{}'
+  manual TEXT NOT NULL DEFAULT '{}',
+  grp TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS prints (
@@ -38,7 +39,7 @@ CREATE TABLE IF NOT EXISTS prints (
 );
 """
 JSON_COLS = ("meta", "tags", "links", "unlinks", "manual")
-EDITABLE = ("name", "tags", "notes", "designer", "source_url", "favorite", "links", "unlinks", "manual")
+EDITABLE = ("name", "tags", "notes", "designer", "source_url", "favorite", "links", "unlinks", "manual", "grp")
 
 
 class Database:
@@ -48,6 +49,9 @@ class Database:
         self.conn = sqlite3.connect(str(path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
+        cols = {r[1] for r in self.conn.execute("PRAGMA table_info(models)")}
+        if "grp" not in cols:            # 0.1/0.2 databases
+            self.conn.execute("ALTER TABLE models ADD COLUMN grp TEXT NOT NULL DEFAULT ''")
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.commit()
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
@@ -12,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
-from . import config, filamenthub as fhm, library, prints
+from . import config, filamenthub as fhm, groups, library, prints
 from .db import Database
 
 logging.basicConfig(level=config.LOG_LEVEL, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -78,7 +79,7 @@ def _card(m: dict, pc: dict | None = None) -> dict:
             "thumb": m["thumb"], "mesh": bool(meta.get("mesh")), "grams": _grams(m), "seconds": _seconds(m),
             "filaments": [{"type": f.get("type"), "color": f.get("color")} for f in meta.get("filaments") or []],
             "plates": len(meta.get("plates") or []) or 1, "dims": meta.get("dims"), "error": meta.get("error"),
-            "printed": pc.get("n", 0), "photo": pc.get("photo")}
+            "printed": pc.get("n", 0), "photo": pc.get("photo"), "grp": m.get("grp") or ""}
 
 
 def _grams(m: dict):
@@ -103,9 +104,18 @@ def _library_or_none():
 @app.get("/api/models")
 def list_models(q: str = Query("", max_length=200), folder: str | None = Query(None, max_length=500),
                 tag: str = Query("", max_length=100), favorite: bool = False,
-                sort: Literal["added", "name", "printed", "size"] = "added", sub: bool = True):
+                sort: Literal["added", "name", "printed", "size"] = "added", sub: bool = True, grouped: bool = True):
     rows = db.models()
     counts = db.print_counts()
+    # versions are grouped over the whole library, so a search that hits an old version still shows its group
+    gid = {}
+    gsize = {}
+    gnewest = {}
+    for g in groups.group(rows):
+        for m in g:
+            gid[m["id"]] = g[0]["id"]
+        gsize[g[0]["id"]] = len(g)
+        gnewest[g[0]["id"]] = g[0]
     words = [w for w in q.lower().split() if w]
     out = []
     for m in rows:
@@ -126,6 +136,23 @@ def list_models(q: str = Query("", max_length=200), folder: str | None = Query(N
             if not all(w in text for w in words):
                 continue
         out.append(_card(m, counts.get(m["id"]) or {}))
+    if grouped:
+        seen, cards = set(), []
+        for c in out:
+            head = gid.get(c["id"], c["id"])
+            if head in seen:
+                continue
+            seen.add(head)
+            if head != c["id"] and not (q or tag or favorite):
+                c = _card(gnewest[head], counts.get(head) or {})   # the group shows its newest version
+            members = [m for m in rows if gid.get(m["id"]) == head]
+            c["versions"] = gsize.get(head, 1)
+            c["group_printed"] = sum((counts.get(m["id"]) or {}).get("n", 0) for m in members)
+            if not c["photo"]:
+                c["group_photo"] = next(([m["id"], (counts.get(m["id"]) or {}).get("photo")] for m in members
+                                         if (counts.get(m["id"]) or {}).get("photo")), None)
+            cards.append(c)
+        out = cards
     if sort == "name":
         out.sort(key=lambda c: c["name"].lower())
     elif sort == "printed":
@@ -167,6 +194,12 @@ def _detail(m: dict, margin_override: dict | None = None, copies: int = 1) -> di
     out["history"] = hist
     out["links"] = m["links"]
     out["printed"] = len(hist)
+    rows = db.models()
+    grp = next((g for g in groups.group(rows) if any(x["id"] == m["id"] for x in g)), [m])
+    counts = db.print_counts()
+    out["versions"] = [_card(x, counts.get(x["id"]) or {}) for x in grp] if len(grp) > 1 else []
+    out["group_label"] = groups.label(grp) if len(grp) > 1 else ""
+    out["grp"] = m.get("grp") or ""
     out["photos"] = [{"task_id": h["task_id"], "end": h.get("end"), "title": h.get("title"), "plate": h.get("plate")}
                      for h in hist if h.get("photo")]
     if spools is None:
@@ -247,6 +280,7 @@ class ModelPatch(BaseModel):
     favorite: bool | None = None
     folder: str | None = Field(None, max_length=500)
     manual: dict | None = None
+    grp: str | None = Field(None, max_length=40)
 
 
 @app.patch("/api/models/{mid}")
@@ -274,6 +308,12 @@ def patch_model(mid: int, body: ModelPatch):
         if mat:
             man["material"] = mat
         data["manual"] = man
+    if "grp" in data:
+        g = data["grp"] or ""
+        if g not in ("", "-") and not (g.startswith("with:") and g[5:].isdigit() and db.model(int(g[5:]))
+                                        and int(g[5:]) != mid):
+            raise HTTPException(400, "Ugyldig gruppe")
+        data["grp"] = g
     db.set_fields(mid, data)
     if folder is not None:
         try:
@@ -365,7 +405,8 @@ async def upload_thumb(mid: int, request: Request):
 
 
 @app.post("/api/upload")
-async def upload(request: Request, name: str = Query(min_length=1, max_length=300), folder: str = Query("", max_length=500)):
+async def upload(request: Request, name: str = Query(min_length=1, max_length=300), folder: str = Query("", max_length=500),
+                 mtime: float | None = Query(None, ge=0, le=4e9)):
     if request.headers.get("content-type", "").split(";")[0] != "application/octet-stream":
         raise HTTPException(415, "Send filen som application/octet-stream")
     try:
@@ -380,6 +421,8 @@ async def upload(request: Request, name: str = Query(min_length=1, max_length=30
                 if total > config.MAX_UPLOAD:
                     raise HTTPException(413, "Filen er for stor (maks 1 GB)")
                 f.write(c)
+        if mtime:   # keep the file's own date (the browser's lastModified), so "newest version" means newest file
+            os.utime(tmp, (mtime, mtime))
         mid = await run_in_threadpool(library.finish_upload, db, tmp, target)
     except library.LibraryError as e:
         _err(e)

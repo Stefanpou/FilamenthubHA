@@ -3,6 +3,7 @@
   import Icon from './Icon.svelte';
   import Viewer from './Viewer.svelte';
   import { get, post, patch, del, kr, num, dur, bytes, date } from './api.js';
+  import { requestThumbs } from './thumbs.js';
 
   let { id, folders = [], onClose, onChanged, toast } = $props();
   let m = $state(null), err = $state(''), busy = $state(false);
@@ -17,6 +18,8 @@
   }
   function set(d) {
     m = d;
+    const need = (d.versions || []).filter((v) => v.mesh && !v.thumb && !v.photo).map((v) => v.id);
+    if (need.length) requestThumbs(need, (vid) => { const v = m?.versions?.find((x) => x.id === vid); if (v) { v.thumb = 'client'; v.mtime = v.mtime + 0.001; } });
     man = { grams: d.manual?.grams ?? '', minutes: d.manual?.minutes ?? '', material: d.manual?.material ?? '' };
     if (d.price) { mode = d.price.margin.mode; pct = String(d.price.margin.pct ?? ''); fixed = String(d.price.margin.fixed ?? ''); copies = d.price.copies; }
   }
@@ -74,6 +77,8 @@
     if (e.key === 'ArrowLeft') big = (big - 1 + photos.length) % photos.length;
   }
   const colors = $derived(Object.fromEntries((m?.meta?.filaments || []).filter((f) => f.color).map((f) => [String(f.id), f.color])));
+  let others = $state([]);
+  $effect(() => { if (m) get('api/models?grouped=false&sort=name').then((r) => (others = r.items.filter((x) => x.id !== m.id))).catch(() => {}); });
   const linkedIds = $derived(new Set((m?.history || []).map((h) => h.task_id)));
 </script>
 
@@ -104,6 +109,23 @@
       {#if m.printed}<span class="badge accent">Printet {m.printed}×</span>{/if}
       {#if m.error}<span class="badge danger">Kunne ikke læse filen: {m.error}</span>{/if}
     </div>
+
+    {#if m.versions?.length}
+      <section class="glass pad stack vbox">
+        <div class="row between wrap"><span class="eyebrow">{m.versions.length} versioner af »{m.group_label}« – nyeste først</span>
+          <button class="btn ghost small" onclick={() => save({ grp: '-' }, 'Taget ud af gruppen')}>Tag denne ud af gruppen</button></div>
+        <div class="vstrip">
+          {#each m.versions as v, i (v.id)}
+            <a class="ver" class:on={v.id === m.id} href={`#/m/${v.id}`} title={v.file}>
+              <span class="vpic">{#if v.photo}<img src={`api/models/${v.id}/photos/${v.photo}.jpg`} alt="" class="ph" loading="lazy">{:else if v.thumb}<img src={`api/models/${v.id}/thumb?v=${v.mtime}`} alt="" loading="lazy">{/if}</span>
+              <span class="vtx"><b class="ellipsis">{v.name}</b><span class="tiny muted">{i === 0 ? 'Nyeste · ' : ''}{date(v.mtime)}{v.printed ? ` · printet ${v.printed}×` : ''}</span></span>
+            </a>
+          {/each}
+        </div>
+      </section>
+    {:else if m.grp === '-'}
+      <div class="small muted row">Ikke grupperet med andre versioner. <button class="linkbtn" onclick={() => save({ grp: '' }, 'Grupperes automatisk igen')}>Gruppér automatisk igen</button></div>
+    {/if}
 
     <div class="cols">
       <div class="stack">
@@ -150,6 +172,11 @@
           {#if m.source_url}<a class="small" href={m.source_url} target="_blank" rel="noopener noreferrer"><Icon name="link" size={14} /> Åbn kilden</a>{/if}
           <label class="f">Noter<textarea class="input" value={m.notes} onchange={(e) => save({ notes: e.target.value })}></textarea></label>
           {#if m.meta.description}<details class="small"><summary class="muted">Beskrivelse fra filen</summary><p class="desc">{m.meta.description}</p></details>{/if}
+          <label class="f">Version af en anden model
+            <select class="input" value={m.grp.startsWith('with:') ? m.grp : ''} onchange={(e) => save({ grp: e.target.value }, 'Gruppe ændret')}>
+              <option value="">{m.grp === '-' ? 'Ikke grupperet' : 'Automatisk (efter filnavn)'}</option>
+              {#each others as o}<option value={`with:${o.id}`}>{o.name} ({o.file})</option>{/each}
+            </select></label>
           <div class="tiny muted mono ellipsis" title={m.relpath}>/share/modelbank/{m.relpath}</div>
         </section>
       </div>
@@ -325,6 +352,16 @@
   .scrim { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.55); display: grid; place-items: center; padding: 16px; }
   .sheet { width: 100%; max-width: 640px; background: var(--panel-solid); }
   details summary { cursor: pointer; }
+  .vbox { gap: 10px; padding: 12px 16px; }
+  .vstrip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+  .ver { flex: none; width: 210px; display: flex; gap: 10px; align-items: center; padding: 6px; border-radius: 10px; color: var(--text);
+    border: 1px solid var(--panel-border); background: var(--bg-2); min-width: 0; }
+  .ver:hover { border-color: var(--panel-border-hi); }
+  .ver.on { border-color: var(--accent); }
+  .vpic { width: 48px; height: 48px; border-radius: 8px; overflow: hidden; background: var(--panel-hi); flex: none; }
+  .vpic img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .vpic img.ph { object-fit: cover; }
+  .vtx { display: flex; flex-direction: column; min-width: 0; font-size: 13px; }
   .seg { gap: 6px; }
   .hero { position: relative; display: block; width: 100%; aspect-ratio: 4 / 3; padding: 0; border: 1px solid var(--panel-border);
     border-radius: var(--radius); overflow: hidden; background: #0d0e10; cursor: zoom-in; }

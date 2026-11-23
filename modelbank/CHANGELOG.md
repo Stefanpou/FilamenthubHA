@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- Versioner af samme model grupperes: filer i samme mappe, hvis navne starter med de samme ord (fx `yubikey_5c_nfc_v2`, `yubikey_5c_nfc_lock`, `yubikey_noglering`), vises som ét kort med den nyeste version og »N versioner«. Inde på modellen ses alle versioner, nyeste først. Generiske ord som »Bambu Lab X2D« eller »holder« tæller ikke.
+- Du kan tage en fil ud af en gruppe, eller lægge den sammen med en anden model under Oplysninger. »Grupér versioner« øverst slår det fra.
+- Upload beholder filens egen dato, så »nyeste« er den nyeste fil.
+- Versions of a model are grouped (shared leading words in the file name, same folder); newest shown, all versions on the model page; manual override per file.
+
 ## 0.2.0
 
 - Fotoet, FilamentHub tager, når et print er færdigt, bliver nu modellens billede. Printer du den samme fil flere gange (eller flere plader af den), gemmes alle fotos i Modelbank og vises i et galleri på modellen – også selvom printet senere slettes i FilamentHub.

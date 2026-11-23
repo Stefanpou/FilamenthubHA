@@ -18,6 +18,8 @@
   let folders = $state([]), total = $state(0), tags = $state([]);
   let q = $state(''), folder = $state(null), tag = $state(''), fav = $state(false), sort = $state('added');
   let bust = $state({}), broken = $state({});
+  let grouped = $state((() => { try { return localStorage.getItem('mb-grouped') !== '0'; } catch { return true; } })());
+  $effect(() => { try { localStorage.setItem('mb-grouped', grouped ? '1' : '0'); } catch { /* */ } });
   let toasts = $state([]);
   const toast = (text, bad = false) => {
     const t = { id: Math.random(), text, bad };
@@ -26,7 +28,7 @@
   };
 
   async function load() {
-    const p = new URLSearchParams({ q, sort });
+    const p = new URLSearchParams({ q, sort, grouped: String(grouped) });
     if (folder !== null) p.set('folder', folder);
     if (tag) p.set('tag', tag);
     if (fav) p.set('favorite', 'true');
@@ -44,7 +46,7 @@
     } catch { /* list still works */ }
   }
   let lt;
-  $effect(() => { q; folder; tag; fav; sort; clearTimeout(lt); lt = setTimeout(load, q ? 250 : 0); });
+  $effect(() => { q; folder; tag; fav; sort; grouped; clearTimeout(lt); lt = setTimeout(load, q ? 250 : 0); });
   onMount(loadMeta);
   const refresh = () => { load(); loadMeta(); };
 
@@ -92,7 +94,9 @@
 
   const folderLabel = $derived(folder === null ? 'Alle modeller' : folder === '' ? 'Rodmappen' : folder.split('/').pop());
   const depth = (p) => p.split('/').length - 1;
-  const thumbSrc = (it) => (it.photo ? `api/models/${it.id}/photos/${it.photo}.jpg` : `api/models/${it.id}/thumb?v=${bust[it.id] || it.mtime}`);
+  const thumbSrc = (it) => (it.photo ? `api/models/${it.id}/photos/${it.photo}.jpg`
+    : it.group_photo ? `api/models/${it.group_photo[0]}/photos/${it.group_photo[1]}.jpg`
+    : `api/models/${it.id}/thumb?v=${bust[it.id] || it.mtime}`);
 </script>
 
 <svelte:window ondragenter={onEnter} ondragleave={onLeave} ondragover={onOver} ondrop={onDrop} />
@@ -136,6 +140,7 @@
           <select class="input sort" bind:value={sort} aria-label="Sortér">
             <option value="added">Nyeste</option><option value="name">Navn</option><option value="printed">Mest printet</option><option value="size">Størst</option>
           </select>
+          <label class="row small dim grp" title="Vis kun den nyeste version af hver model"><input type="checkbox" bind:checked={grouped}> Grupér versioner</label>
           <button class="btn" onclick={scan} disabled={scanning} title="Find filer lagt ind via Samba"><Icon name="refresh" size={18} /> {scanning ? 'Scanner …' : 'Scan'}</button>
         </div>
       </div>
@@ -152,10 +157,11 @@
       {:else}
         <div class="grid">
           {#each items as it, i (it.id)}
-            <a class="card glass rise" style="--i:{i}" href={`#/m/${it.id}`}>
+            <a class="card glass rise" class:stack3={it.versions > 1} style="--i:{i}" href={`#/m/${it.id}`}>
               <div class="pic">
-                {#if (it.photo || it.thumb) && !broken[it.id]}<img class:photo={it.photo} src={thumbSrc(it)} alt="" loading="lazy" onerror={() => (broken[it.id] = true)}>{:else}<div class="ph"><span class="badge">{it.kind === 'stl' ? 'STL' : '3MF'}</span></div>{/if}
-                {#if it.printed}<span class="badge accent pr">Printet {it.printed}×</span>{/if}
+                {#if (it.photo || it.group_photo || it.thumb) && !broken[it.id]}<img class:photo={it.photo || it.group_photo} src={thumbSrc(it)} alt="" loading="lazy" onerror={() => (broken[it.id] = true)}>{:else}<div class="ph"><span class="badge">{it.kind === 'stl' ? 'STL' : '3MF'}</span></div>{/if}
+                {#if (it.group_printed ?? it.printed)}<span class="badge accent pr">Printet {it.group_printed ?? it.printed}×</span>{/if}
+                {#if it.versions > 1}<span class="badge vers">{it.versions} versioner</span>{/if}
                 {#if it.favorite}<span class="star">★</span>{/if}
               </div>
               <div class="body stack">
@@ -232,6 +238,9 @@
   .pic img.photo { object-fit: cover; }
   .ph { position: absolute; inset: 0; display: grid; place-items: center; }
   .pr { position: absolute; left: 8px; top: 8px; }
+  .vers { position: absolute; right: 8px; bottom: 8px; background: rgba(10,12,14,.78); color: var(--text); }
+  .stack3 { box-shadow: 4px 4px 0 -1px var(--bg), 4px 4px 0 0 var(--panel-border-hi), 8px 8px 0 -1px var(--bg), 8px 8px 0 0 var(--panel-border); }
+  .grp { gap: 6px; cursor: pointer; white-space: nowrap; }
   .star { position: absolute; right: 10px; top: 6px; color: #f3c14b; font-size: 18px; }
   .body { padding: 10px 12px 12px; gap: 6px; }
   .nm { font-weight: 500; font-size: 14px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; min-height: 2.6em; }
