@@ -5,6 +5,14 @@
   let { onClose, toast } = $props();
   let s = $state(null), token = $state(''), url = $state(''), status = $state(null), saving = $state(false);
   let mg = $state({ mode: 'pct', pct: '', fixed: '', kg_price: '' });
+  let dups = $state(null), cleaning = $state(false), showDups = $state(false);
+  const loadDups = () => get('api/duplicates').then((d) => (dups = d)).catch(() => {});
+  loadDups();
+  async function cleanDups() {
+    cleaning = true;
+    try { const r = await post('api/duplicates/clean'); toast(`${r.moved} kopier flyttet til .slettet`); await loadDups(); }
+    catch (e) { toast(e.message, true); } finally { cleaning = false; }
+  }
 
   async function load() {
     s = await get('api/settings');
@@ -57,6 +65,26 @@
       Filer, du lægger ind via Samba, dukker op inden for {s.scan_minutes} minutter – eller med det samme, når du trykker »Scan«.
       Slettede modeller flyttes til <span class="mono">.slettet</span>.</p>
   </section>
+  <section class="glass pad stack">
+    <h2><Icon name="copy" size={20} /> Dubletter</h2>
+    {#if !dups}<span class="spinner"></span>
+    {:else if !dups.extra}<p class="small dim">Ingen filer findes flere gange.</p>
+    {:else}
+      <p class="small dim">{dups.groups.length} {dups.groups.length === 1 ? 'fil' : 'filer'} findes flere gange med præcis samme indhold
+        ({dups.extra} overflødige kopier). »Ryd op« beholder én af hver (den med det oprindelige navn) og samler tags, noter,
+        favorit og printhistorik på den. Kopierne flyttes til <span class="mono">.slettet</span>, så intet er væk for altid.</p>
+      <button class="linkbtn small" style="align-self:flex-start" onclick={() => (showDups = !showDups)}>{showDups ? 'Skjul listen' : 'Vis hvilke'}</button>
+      {#if showDups}
+        <div class="dl">
+          {#each dups.groups as g}
+            <div class="small"><b>{g.keep.relpath}</b> <span class="muted">beholdes</span>
+              {#each g.extra as x}<div class="tiny muted mono">– {x.relpath}</div>{/each}</div>
+          {/each}
+        </div>
+      {/if}
+      <div><button class="btn" disabled={cleaning} onclick={cleanDups}><Icon name="trash" size={18} /> {cleaning ? 'Rydder op …' : `Ryd op (${dups.extra} kopier)`}</button></div>
+    {/if}
+  </section>
   <div><button class="btn primary big" disabled={saving} onclick={save}>{saving ? 'Gemmer …' : 'Gem'}</button></div>
   {/if}
 </div>
@@ -64,4 +92,5 @@
 <style>
   h2 { font-size: 17px; display: flex; align-items: center; gap: 8px; }
   .page { max-width: 760px; gap: 18px; }
+  .dl { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow: auto; }
 </style>

@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
@@ -449,6 +450,62 @@ def exists(sha: str = Query(min_length=64, max_length=64, pattern="^[0-9a-f]{64}
     m = library.duplicate_of(db, sha)
     return {"exists": bool(m), "id": m["id"] if m else None, "name": m["name"] if m else None,
             "relpath": m["relpath"] if m else None}
+
+
+def _duplicate_groups() -> list[list[dict]]:
+    """Models with exactly the same content; the first one is kept (original name before 'name (2)', then oldest)."""
+    by: dict[str, list[dict]] = {}
+    for m in db.models():
+        if m.get("sha"):
+            by.setdefault(m["sha"], []).append(m)
+    out = []
+    for ms in by.values():
+        if len(ms) > 1:
+            ms.sort(key=lambda m: (bool(re.search(r" \(\d+\)\.[^.]+$", m["relpath"])), m["added"], m["id"]))
+            out.append(ms)
+    return out
+
+
+@app.get("/api/duplicates")
+def duplicates():
+    gs = _duplicate_groups()
+    return {"groups": [{"keep": _card(g[0]), "extra": [_card(x) for x in g[1:]]} for g in gs],
+            "extra": sum(len(g) - 1 for g in gs)}
+
+
+@app.post("/api/duplicates/clean")
+def clean_duplicates():
+    """Keeps one copy of each file; its tags, notes, favorite and print links get those of the copies, which are moved
+    to .slettet (nothing is deleted for good)."""
+    moved = 0
+    for g in _duplicate_groups():
+        keep, extra = g[0], g[1:]
+        tags = sorted({t for m in g for t in m["tags"]}, key=str.lower)
+        links = sorted({t for m in g for t in m["links"]})
+        unlinks = sorted({t for m in g for t in m["unlinks"]} - set(links))
+        notes = "\n\n".join(dict.fromkeys(n.strip() for n in (m["notes"] for m in g) if n.strip()))
+        fields = {"tags": tags, "links": links, "unlinks": unlinks, "notes": notes, "favorite": any(m["favorite"] for m in g)}
+        for k in ("designer", "source_url"):
+            if not keep[k]:
+                fields[k] = next((m[k] for m in extra if m[k]), "")
+        if not keep["manual"]:
+            fields["manual"] = next((m["manual"] for m in extra if m["manual"]), {})
+        db.set_fields(keep["id"], fields)
+        for m in extra:
+            for p in db.prints(m["id"]):          # keep the prints + photos stored on the copies
+                src = prints.photo_path(m["id"], p["task_id"])
+                if p.get("photo") and src.is_file():
+                    dst = prints.photo_path(keep["id"], p["task_id"])
+                    if not dst.exists():
+                        src.replace(dst)
+                db.upsert_print(keep["id"], p, photo=p.get("photo") and prints.photo_path(keep["id"], p["task_id"]).is_file())
+            try:
+                library.trash(db, m["id"])
+                moved += 1
+            except (library.LibraryError, OSError) as e:
+                log.warning("duplicate %s: %s", m["relpath"], e)
+    print_sync.kick()
+    return {"moved": moved}
 
 
 @app.get("/api/fingerprints")

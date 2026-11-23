@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- Indstillinger → Dubletter viser filer, der ligger flere gange med præcis samme indhold (fx fra tidligere uploads), og »Ryd op« beholder én af hver med samlede tags, noter, favorit og printhistorik. Kopierne flyttes til `.slettet`.
+- Settings → Dubletter: list identical files and keep one of each (copies moved to .slettet).
+
 ## 0.5.0
 
 - Statusfelt for upload nederst til højre (træk-og-slip, »Upload modeller« og »Find på computeren«): fil X af Y, samlet procent og MB, hastighed, tid tilbage, den fil der er i gang (også mens serveren læser den), fejl og en Stop-knap. Feltet bliver stående, mens du klikker rundt, og siden advarer, hvis du lukker den midt i en upload.
