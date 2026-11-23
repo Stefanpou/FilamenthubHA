@@ -258,6 +258,15 @@ def is_https(request: Request) -> bool:
 
 # ---- Spoolman-compatible API (/api/v1): no session cookie for Home Assistant / OrcaSlicer ---------------------------
 API_PREFIX = "/api/v1"
+# Read-only (GET/HEAD) paths that also accept the API bearer token, for companion apps such as Modelbank:
+# the print library (list + its photo/cover/3MF files) and the measured power + electricity price window.
+TOKEN_READ_EXACT = frozenset({"/api/library", "/api/power", "/api/power/window"})
+TOKEN_READ_PREFIX = ("/api/library/",)
+
+
+def token_read_path(request: Request) -> bool:
+    path = request.url.path
+    return request.method in ("GET", "HEAD") and (path in TOKEN_READ_EXACT or path.startswith(TOKEN_READ_PREFIX))
 _PROXY_HEADERS = ("x-forwarded-for", "x-real-ip", "cf-connecting-ip", "cf-ray", "forwarded", "x-forwarded-host")
 
 

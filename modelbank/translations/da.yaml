@@ -1,0 +1,4 @@
+configuration:
+  log_level:
+    name: Log-niveau
+    description: Hvor detaljeret loggen skal være (debug, info, warning, error).

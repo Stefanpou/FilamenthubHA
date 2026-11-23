@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.27
+
+- API-tokenet (Indstillinger → Spoolman-kompatibel API) giver nu også læseadgang til printbiblioteket og strøm-/elprisdata, så den nye app **Modelbank** kan vise printhistorik og pris for dine modeller. Intet andet åbnes, og intet kan ændres med tokenet ud over Spoolman-API'et.
+- The API token also allows GET on /api/library (+ its files), /api/power and /api/power/window, for the Modelbank add-on.
+
 ## 0.3.26
 
 - X2D-tegningen viser nu alle AMS'er stablet oven på hinanden (A nederst, B ovenpå) med gram på hver bakke, når »Flere AMS'er« er slået til. Fanerne bruges kun ved andre printermodeller.

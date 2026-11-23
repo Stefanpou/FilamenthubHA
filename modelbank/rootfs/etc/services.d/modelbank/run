@@ -1,0 +1,8 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck shell=bash
+export LOG_LEVEL="$(bashio::config 'log_level' | tr '[:lower:]' '[:upper:]')"
+export MODELBANK_ADDON=1
+mkdir -p /share/modelbank
+cd /opt/modelbank
+bashio::log.info "Starter Modelbank (filer i /share/modelbank)..."
+exec python3 -c "from app.main import run; run()"

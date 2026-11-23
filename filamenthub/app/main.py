@@ -150,6 +150,7 @@ async def guard(request: Request, call_next):
         if (path not in OPEN_PATHS and auth.login_required(db) and not auth.is_ingress(request)
                 and not auth.valid_session(db, request.cookies.get(auth.COOKIE))
                 and not (v1 and (auth.has_valid_api_token(db, request) or auth.is_direct_lan(request)))
+                and not (auth.token_read_path(request) and auth.has_valid_api_token(db, request))
                 and not api_ha.ha.kiosk_allows(db, request)):
             return JSONResponse({"detail": "Log ind"}, status_code=401)
     response = await call_next(request)
