@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+
+- Statusfelt for upload nederst til højre (træk-og-slip, »Upload modeller« og »Find på computeren«): fil X af Y, samlet procent og MB, hastighed, tid tilbage, den fil der er i gang (også mens serveren læser den), fejl og en Stop-knap. Feltet bliver stående, mens du klikker rundt, og siden advarer, hvis du lukker den midt i en upload.
+- Samme fil uploades ikke to gange: indholdet sammenlignes (SHA-256), før filen sendes, og igen på serveren. Har filen samme navn, men nyt indhold, er det en nyere version og gemmes som en ny fil i versionsgruppen.
+- Upload progress panel with speed and time left; identical files are never stored twice (content hash), changed files become a new version.
+
 ## 0.4.1
 
 - »Nyeste version« bruger nu tidspunktet, hvor 3MF-filen blev gemt i Bambu Studio/OrcaSlicer (det står inde i filen), i stedet for upload-tidspunktet. Filer, der er uploadet samtidig, kommer derfor i den rigtige rækkefølge. Eksisterende filer læses igen automatisk.

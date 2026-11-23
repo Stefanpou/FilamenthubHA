@@ -1,6 +1,7 @@
 """The model files on disk (MODELS_DIR, normally /share/modelbank) and their rows + cached thumbnail/mesh."""
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import re
@@ -105,6 +106,14 @@ def _store_parsed(db: Database, mid: int, parsed: parse.Parsed, keep_client_thum
     return ""
 
 
+def file_sha(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def ingest(db: Database, path: Path) -> int:
     rel = _rel(path)
     st = path.stat()
@@ -113,12 +122,12 @@ def ingest(db: Database, path: Path) -> int:
     if row:
         thumb = _store_parsed(db, row["id"], parsed, keep_client_thumb=False)
         db.update_file(row["id"], st.st_size, st.st_mtime, parsed.meta, thumb)
+        db.set_fields(row["id"], {"sha": file_sha(path)})
         return row["id"]
     name = parsed.meta.get("title") or path.stem
     mid = db.insert(rel, name, st.st_size, st.st_mtime, parsed.meta, "")
     thumb = _store_parsed(db, mid, parsed, keep_client_thumb=False)
-    if thumb:
-        db.set_fields(mid, {"thumb": thumb})
+    db.set_fields(mid, {"thumb": thumb, "sha": file_sha(path)})
     return mid
 
 
@@ -141,6 +150,8 @@ def scan(db: Database) -> dict:
                     row = db.by_path(rel)
                     if row and row["size"] == st.st_size and abs(row["mtime"] - st.st_mtime) < 1e-3 \
                             and (row["meta"] or {}).get("v") == parse.PARSE_VERSION:
+                        if not row.get("sha"):
+                            db.set_fields(row["id"], {"sha": file_sha(p)})
                         continue
                     ingest(db, p)
                     added += row is None
@@ -182,6 +193,14 @@ def begin_upload(folder: str, filename: str) -> tuple[Path, Path]:
     folder = clean_folder(folder)
     target = unique_target(folder, clean_name(filename))
     return target.with_name(f".upload-{os.getpid()}-{time.time_ns()}"), target
+
+
+def duplicate_of(db: Database, sha: str) -> dict | None:
+    """The model that already has exactly this content (and whose file is still there)."""
+    m = db.by_sha(sha)
+    if m and full(m["relpath"]).is_file():
+        return m
+    return None
 
 
 def finish_upload(db: Database, tmp: Path, target: Path) -> int:

@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS models (
   unlinks TEXT NOT NULL DEFAULT '[]',
   thumb TEXT NOT NULL DEFAULT '',
   manual TEXT NOT NULL DEFAULT '{}',
-  grp TEXT NOT NULL DEFAULT ''
+  grp TEXT NOT NULL DEFAULT '',
+  sha TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS prints (
@@ -52,6 +53,8 @@ class Database:
         cols = {r[1] for r in self.conn.execute("PRAGMA table_info(models)")}
         if "grp" not in cols:            # 0.1/0.2 databases
             self.conn.execute("ALTER TABLE models ADD COLUMN grp TEXT NOT NULL DEFAULT ''")
+        if "sha" not in cols:            # before 0.5
+            self.conn.execute("ALTER TABLE models ADD COLUMN sha TEXT NOT NULL DEFAULT ''")
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.commit()
 
@@ -90,6 +93,13 @@ class Database:
             r = self.conn.execute("SELECT * FROM models WHERE relpath=?", (relpath,)).fetchone()
         return self._row(r) if r else None
 
+    def by_sha(self, sha: str) -> dict | None:
+        if not sha:
+            return None
+        with self.lock:
+            r = self.conn.execute("SELECT * FROM models WHERE sha=? ORDER BY id LIMIT 1", (sha,)).fetchone()
+        return self._row(r) if r else None
+
     def insert(self, relpath: str, name: str, size: int, mtime: float, meta: dict, thumb: str) -> int:
         with self.lock:
             cur = self.conn.execute(
@@ -108,7 +118,7 @@ class Database:
     def set_fields(self, mid: int, fields: dict) -> None:
         cols, vals = [], []
         for k, v in fields.items():
-            if k not in EDITABLE and k not in ("relpath", "thumb"):
+            if k not in EDITABLE and k not in ("relpath", "thumb", "sha"):
                 raise KeyError(k)
             cols.append(f"{k}=?")
             vals.append(json.dumps(v) if k in JSON_COLS else int(v) if k == "favorite" else v)

@@ -1,6 +1,7 @@
 """Modelbank: a library of STL/3MF model files for Home Assistant that works with FilamentHub."""
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -415,13 +416,18 @@ async def upload(request: Request, name: str = Query(min_length=1, max_length=30
     except library.LibraryError as e:
         _err(e)
     total = 0
+    h = hashlib.sha256()
     try:
         with open(tmp, "wb") as f:
             async for c in request.stream():
                 total += len(c)
                 if total > config.MAX_UPLOAD:
                     raise HTTPException(413, "Filen er for stor (maks 1 GB)")
+                h.update(c)
                 f.write(c)
+        same = library.duplicate_of(db, h.hexdigest())
+        if same:     # exactly this file is already here: keep the one copy (a changed file is a new version)
+            return {**_card(same), "duplicate": True}
         if mtime:   # keep the file's own date (the browser's lastModified), so "newest version" means newest file
             os.utime(tmp, (mtime, mtime))
         mid = await run_in_threadpool(library.finish_upload, db, tmp, target)
@@ -435,6 +441,14 @@ async def upload(request: Request, name: str = Query(min_length=1, max_length=30
     except (fhm.FHError, OSError) as e:
         log.info("upload sync: %s", e)
     return _card(db.model(mid))
+
+
+@app.get("/api/exists")
+def exists(sha: str = Query(min_length=64, max_length=64, pattern="^[0-9a-f]{64}$")):
+    """Lets the browser skip sending a file whose exact content is already in the library."""
+    m = library.duplicate_of(db, sha)
+    return {"exists": bool(m), "id": m["id"] if m else None, "name": m["name"] if m else None,
+            "relpath": m["relpath"] if m else None}
 
 
 @app.get("/api/fingerprints")

@@ -3,7 +3,9 @@
   import Detail from './lib/Detail.svelte';
   import Settings from './lib/Settings.svelte';
   import Finder from './lib/Finder.svelte';
-  import { get, post, upload, num, dur } from './lib/api.js';
+  import UploadPanel from './lib/UploadPanel.svelte';
+  import { enqueue, onQueueDone } from './lib/uploads.svelte.js';
+  import { get, post, num, dur } from './lib/api.js';
   import { requestThumbs } from './lib/thumbs.js';
   import { onMount } from 'svelte';
 
@@ -70,24 +72,21 @@
   }
 
   // ---- upload (button + drag & drop anywhere)
-  let uploads = $state([]), drag = $state(0), fileInput;
+  let drag = $state(0), fileInput;
   const OK = /\.(3mf|stl)$/i;
-  async function send(files) {
+  function send(files) {
     const list = [...files].filter((f) => OK.test(f.name));
     const skipped = files.length - list.length;
     if (skipped) toast(`${skipped} fil(er) sprunget over – kun .3mf og .stl`, true);
     const target = folder || '';
-    for (const f of list) uploads.push({ name: f.name, p: 0, err: '' });
-    for (let i = 0; i < list.length; i++) {
-      const u = uploads[uploads.length - list.length + i];
-      try { await upload(list[i], target, (p) => (u.p = p)); u.p = 1; u.done = true; }
-      catch (e) { u.err = e.message; }
-    }
-    const ok = list.length - uploads.filter((u) => u.err).length;
-    if (list.length) toast(ok === list.length ? `${ok} ${ok === 1 ? 'model' : 'modeller'} tilføjet${target ? ` til ${target}` : ''}` : 'Nogle filer kunne ikke uploades', ok !== list.length);
-    setTimeout(() => (uploads = uploads.filter((u) => u.err)), 2500);
-    refresh();
+    enqueue(list.map((f) => ({ name: f.name, size: f.size, folder: target, get: async () => f })));
   }
+  onMount(() => onQueueDone(({ ok, failed, dups }) => {
+    const main = failed ? `${ok} uploadet, ${failed} fejlede` : ok ? `${ok} ${ok === 1 ? 'model' : 'modeller'} uploadet` : 'Ingen nye filer';
+    const extra = dups ? ` – ${dups} ${dups === 1 ? 'fandtes' : 'fandtes'} allerede og blev ikke uploadet igen` : '';
+    if (ok || failed || dups) toast(main + extra, !!failed);
+    refresh();
+  }));
   const isFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
   function onEnter(e) { if (isFiles(e)) { e.preventDefault(); drag++; } }
   function onLeave(e) { if (isFiles(e)) drag = Math.max(0, drag - 1); }
@@ -132,7 +131,7 @@
 
   <main>
     {#if finder}
-      <Finder {folders} {toast} onDone={refresh} onClose={() => go('#/')} />
+      <Finder {folders} {toast} onClose={() => go('#/')} />
     {:else if settings}
       <Settings onClose={() => { go('#/'); refresh(); }} {toast} />
     {:else if detailId}
@@ -193,16 +192,7 @@
   <div class="drop"><div class="dropbox"><Icon name="upload" size={32} /><b>Slip for at uploade</b><span class="small dim">til {folder ? folder : 'rodmappen'}</span></div></div>
 {/if}
 
-{#if uploads.length}
-  <div class="ups glass pad stack">
-    {#each uploads as u}
-      <div class="stack" style="gap:4px">
-        <div class="row between small"><span class="ellipsis">{u.name}</span><span class="mono muted">{u.err ? '' : u.done ? '✓' : `${Math.round(u.p * 100)} %`}</span></div>
-        {#if u.err}<div class="tiny" style="color:var(--danger)">{u.err}</div>{:else}<div class="bar"><i style="width:{u.p * 100}%"></i></div>{/if}
-      </div>
-    {/each}
-  </div>
-{/if}
+<UploadPanel />
 
 <div class="toasts">{#each toasts as t (t.id)}<div class="toast" class:bad={t.bad}>{t.text}</div>{/each}</div>
 
@@ -255,7 +245,6 @@
   .drop { position: fixed; inset: 0; z-index: 200; background: rgba(8,10,12,.6); display: grid; place-items: center; pointer-events: none; }
   .dropbox { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 48px; border-radius: 16px; border: 2px dashed var(--accent);
     background: var(--panel-solid); color: var(--text); }
-  .ups { position: fixed; right: 16px; bottom: 16px; width: 320px; z-index: 150; background: var(--panel-solid); box-shadow: 0 12px 40px rgba(0,0,0,.45); }
   .toasts { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 300; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
   .toast { background: var(--panel-hi); border: 1px solid var(--panel-border-hi); padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.4); animation: rise .3s var(--ease); }
   .toast.bad { border-color: color-mix(in srgb, var(--danger) 50%, transparent); color: #f0a3a6; }

@@ -30,23 +30,6 @@ export const post = (p, body) => api(p, { method: 'POST', body });
 export const patch = (p, body) => api(p, { method: 'PATCH', body });
 export const del = (p) => api(p, { method: 'DELETE' });
 
-/** Upload one file with progress (XHR: fetch has no upload progress). */
-export function upload(file, folder, onProgress) {
-  return new Promise((resolve, reject) => {
-    const x = new XMLHttpRequest();
-    x.open('POST', `api/upload?name=${encodeURIComponent(file.name)}&folder=${encodeURIComponent(folder || '')}${file.lastModified ? `&mtime=${Math.floor(file.lastModified / 1000)}` : ''}`);
-    x.setRequestHeader('Content-Type', 'application/octet-stream');
-    x.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
-    x.onload = () => {
-      let d = null;
-      try { d = JSON.parse(x.responseText); } catch { /* */ }
-      x.status < 300 ? resolve(d) : reject(new ApiError(detail(d, x.status), x.status));
-    };
-    x.onerror = () => reject(new ApiError('Upload afbrudt', 0));
-    x.send(file);
-  });
-}
-
 export const kr = (v) => (v == null ? '–' : `${Number(v).toLocaleString('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kr`);
 export const num = (v, d = 0) => (v == null ? '–' : Number(v).toLocaleString('da-DK', { maximumFractionDigits: d }));
 export function dur(sec) {

@@ -3,10 +3,11 @@
      can remember them for "Scan igen"; elsewhere a folder upload field). Nothing is sent until "Upload" is pressed. -->
 <script>
   import Icon from './Icon.svelte';
-  import { get, upload, bytes, date } from './api.js';
+  import { get, bytes, date } from './api.js';
+  import { enqueue, uq } from './uploads.svelte.js';
   import { onMount } from 'svelte';
 
-  let { folders = [], toast, onDone, onClose } = $props();
+  let { folders = [], toast, onClose } = $props();
   const fsApi = typeof window.showDirectoryPicker === 'function';
   const OK = /\.(3mf|stl)$/i;
   const SKIP = /^(\.|\$)|^(node_modules|appdata|application data|program files( \(x86\))?|programdata|windows|library|system volume information|temp|tmp|cache|caches)$/i;
@@ -14,7 +15,6 @@
   let found = $state([]);          // {key, name, path, size, mtime, root, status: 'new'|'known'|'dup', pick, get}
   let scanning = $state(false), seen = $state(0), saved = $state([]), stopFlag = false;
   let onlyNew = $state(true), keepTree = $state(true), dest = $state('');
-  let up = $state(null);           // {i, n, file, p, errors: []}
   let input;
 
   // ---- remembered folders (Chrome/Edge): directory handles in IndexedDB
@@ -127,23 +127,13 @@
     const parts = [dest, ...(keepTree ? [f.root, ...f.path.split('/')] : [])].flatMap((p) => (p || '').split('/')).map(clean).filter(Boolean);
     return parts.join('/');
   };
-  async function send() {
+  function send() {
     const list = found.filter((f) => f.pick);
     if (!list.length) return;
-    up = { i: 0, n: list.length, file: '', p: 0, errors: [] };
-    for (const f of list) {
-      up.file = f.name; up.p = 0;
-      try {
-        const file = await f.get();
-        await upload(file, target(f), (p) => (up.p = p));
-        f.status = 'known'; f.pick = false;
-      } catch (e) { up.errors.push(`${f.name}: ${e.message}`); }
-      up.i++;
-    }
-    const ok = up.n - up.errors.length;
-    toast(up.errors.length ? `${ok} uploadet, ${up.errors.length} fejlede` : `${ok} ${ok === 1 ? 'model' : 'modeller'} uploadet`, !!up.errors.length);
-    onDone?.();
-    if (!up.errors.length) up = null;
+    for (const f of list) f.pick = false;
+    enqueue(list.map((f) => ({ name: f.name, size: f.size, folder: target(f), mtime: f.mtime, get: f.get,
+                               onOk: () => { f.status = 'known'; } })));
+    toast(`${list.length} ${list.length === 1 ? 'fil' : 'filer'} sat i kø – se status nederst til højre`);
   }
 
   const shown = $derived(onlyNew ? found.filter((f) => f.status === 'new') : found);
@@ -208,14 +198,7 @@
         <label class="row small dim keep"><input type="checkbox" bind:checked={keepTree}> Behold mappestrukturen fra computeren</label>
       </div>
       {#if picked.length}<div class="tiny muted">Eksempel: <span class="mono">/share/modelbank/{target(picked[0]) ? target(picked[0]) + '/' : ''}{picked[0].name}</span></div>{/if}
-      {#if up}
-        <div class="stack" style="gap:6px">
-          <div class="row between small"><span class="ellipsis">{up.i < up.n ? `Uploader ${up.file}` : 'Færdig'}</span><span class="mono muted">{up.i}/{up.n}</span></div>
-          <div class="bar"><i style="width:{((up.i + (up.i < up.n ? up.p : 0)) / up.n) * 100}%"></i></div>
-          {#each up.errors as e}<div class="tiny" style="color:var(--danger)">{e}</div>{/each}
-        </div>
-      {/if}
-      <div><button class="btn primary big" disabled={!picked.length || (up && up.i < up.n)} onclick={send}><Icon name="upload" size={18} /> Upload {picked.length} {picked.length === 1 ? 'fil' : 'filer'}</button></div>
+      <div><button class="btn primary big" disabled={!picked.length} onclick={send}><Icon name="upload" size={18} /> Upload {picked.length} {picked.length === 1 ? 'fil' : 'filer'}</button></div>
     </section>
   {/if}
 </div>
