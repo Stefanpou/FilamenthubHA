@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+- Store filer kan nu uploades: Home Assistants Ingress afviser forespørgsler over 16 MB, så filer over 12 MB sendes i bidder på 8 MB og samles igen af Modelbank. En bid, der fejler på grund af netværket, prøves igen (op til 4 gange).
+- Store filer læses i baggrunden, så uploaden ikke venter på dem (kortet viser »Læses …« imens). Store STL-filer læses langt hurtigere (fx 1 mio. trekanter på få sekunder i stedet for over et minut).
+- Large files upload in 8 MB chunks (HA Ingress limits bodies to 16 MB); big models are read in the background, and large STL meshes are reduced much faster.
+
 ## 0.5.2
 
 - Slet direkte fra oversigten: papirkurv på hvert kort (vises, når musen er over kortet; altid på telefon). På en versionsgruppe vælger du, om kun den viste version eller også de ældre skal slettes.

@@ -5,6 +5,8 @@ import hashlib
 import logging
 import os
 import re
+import secrets
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
@@ -78,10 +80,11 @@ def _card(m: dict, pc: dict | None = None) -> dict:
     return {"id": m["id"], "name": m["name"], "file": m["relpath"].rsplit("/", 1)[-1], "folder": _folder_of(m),
             "relpath": m["relpath"], "size": m["size"], "added": m["added"], "mtime": m["mtime"],
             "date": groups.file_date(m),
-            "kind": meta.get("kind"), "tags": m["tags"], "favorite": m["favorite"], "designer": m["designer"],
+            "kind": meta.get("kind") or ("stl" if m["relpath"].lower().endswith(".stl") else "3mf"), "tags": m["tags"], "favorite": m["favorite"], "designer": m["designer"],
             "thumb": m["thumb"], "mesh": bool(meta.get("mesh")), "grams": _grams(m), "seconds": _seconds(m),
             "filaments": [{"type": f.get("type"), "color": f.get("color")} for f in meta.get("filaments") or []],
             "plates": len(meta.get("plates") or []) or 1, "dims": meta.get("dims"), "error": meta.get("error"),
+            "pending": bool(meta.get("pending")),
             "printed": pc.get("n", 0), "photo": pc.get("photo"), "grp": m.get("grp") or ""}
 
 
@@ -427,9 +430,34 @@ async def upload_thumb(mid: int, request: Request):
     return {"ok": True}
 
 
+async def _complete(tmp, target, sha: str, mtime: float | None, background: bool = False) -> dict:
+    """Shared end of both upload kinds: a duplicate is dropped, otherwise the file is stored, read and linked."""
+    try:
+        same = library.duplicate_of(db, sha)
+        if same:     # exactly this file is already here: keep the one copy (a changed file is a new version)
+            return {**_card(same), "duplicate": True}
+        if mtime:   # keep the file's own date (the browser's lastModified), so "newest version" means newest file
+            os.utime(tmp, (mtime, mtime))
+        mid = await run_in_threadpool(library.finish_upload, db, tmp, target, background)
+    except library.LibraryError as e:
+        _err(e)
+    finally:
+        tmp.unlink(missing_ok=True)
+    if background:
+        return _card(db.model(mid))
+    # a file added after it was printed: link it to those prints (and fetch their photos) right away
+    try:
+        await run_in_threadpool(prints.sync, db, fh, mid)
+    except (fhm.FHError, OSError) as e:
+        log.info("upload sync: %s", e)
+    return _card(db.model(mid))
+
+
 @app.post("/api/upload")
 async def upload(request: Request, name: str = Query(min_length=1, max_length=300), folder: str = Query("", max_length=500),
                  mtime: float | None = Query(None, ge=0, le=4e9)):
+    """Small files in one request. Home Assistant's Ingress refuses bodies over 16 MB: bigger files use the
+    chunked upload below."""
     if request.headers.get("content-type", "").split(";")[0] != "application/octet-stream":
         raise HTTPException(415, "Send filen som application/octet-stream")
     try:
@@ -446,22 +474,91 @@ async def upload(request: Request, name: str = Query(min_length=1, max_length=30
                     raise HTTPException(413, "Filen er for stor (maks 1 GB)")
                 h.update(c)
                 f.write(c)
-        same = library.duplicate_of(db, h.hexdigest())
-        if same:     # exactly this file is already here: keep the one copy (a changed file is a new version)
-            return {**_card(same), "duplicate": True}
-        if mtime:   # keep the file's own date (the browser's lastModified), so "newest version" means newest file
-            os.utime(tmp, (mtime, mtime))
-        mid = await run_in_threadpool(library.finish_upload, db, tmp, target)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    return await _complete(tmp, target, h.hexdigest(), mtime)
+
+
+# ---- chunked upload: start -> chunks (in order, each well under Ingress' 16 MB) -> finish
+CHUNK_MAX = 12 * 1024 * 1024
+UPLOAD_TTL = 2 * 3600
+_uploads: dict[str, dict] = {}
+
+
+def _expire_uploads() -> None:
+    now = time.time()
+    for uid, u in list(_uploads.items()):
+        if now - u["ts"] > UPLOAD_TTL:
+            u["tmp"].unlink(missing_ok=True)
+            _uploads.pop(uid, None)
+
+
+class UploadStart(BaseModel):
+    name: str = Field(min_length=1, max_length=300)
+    folder: str = Field("", max_length=500)
+    size: int = Field(ge=1, le=config.MAX_UPLOAD)
+    mtime: float | None = Field(None, ge=0, le=4e9)
+
+
+@app.post("/api/upload/start")
+def upload_start(body: UploadStart):
+    _expire_uploads()
+    try:
+        tmp, target = library.begin_upload(body.folder, body.name)
     except library.LibraryError as e:
         _err(e)
-    finally:
-        tmp.unlink(missing_ok=True)
-    # a file added after it was printed: link it to those prints (and fetch their photos) right away
-    try:
-        await run_in_threadpool(prints.sync, db, fh, mid)
-    except (fhm.FHError, OSError) as e:
-        log.info("upload sync: %s", e)
-    return _card(db.model(mid))
+    tmp.write_bytes(b"")
+    uid = secrets.token_hex(12)
+    _uploads[uid] = {"tmp": tmp, "target": target, "size": body.size, "received": 0, "h": hashlib.sha256(),
+                     "mtime": body.mtime, "ts": time.time()}
+    return {"upload_id": uid, "chunk_size": 8 * 1024 * 1024}
+
+
+def _session(uid: str) -> dict:
+    u = _uploads.get(uid)
+    if not u:
+        raise HTTPException(404, "Uploaden findes ikke længere – start forfra")
+    return u
+
+
+@app.post("/api/upload/{uid}/chunk")
+async def upload_chunk(uid: str, request: Request, offset: int = Query(ge=0)):
+    u = _session(uid)
+    if offset != u["received"]:            # out of order / a retried chunk: tell the client where to continue
+        return JSONResponse({"detail": "Forkert position", "received": u["received"]}, status_code=409)
+    data = bytearray()
+    async for c in request.stream():
+        data += c
+        if len(data) > CHUNK_MAX:
+            raise HTTPException(413, "For stor bid")
+    if u["received"] + len(data) > u["size"]:
+        raise HTTPException(400, "Mere data end filens størrelse")
+    if offset != u["received"]:            # a parallel duplicate of this chunk got here first
+        return JSONResponse({"detail": "Forkert position", "received": u["received"]}, status_code=409)
+    with open(u["tmp"], "ab") as f:
+        f.write(data)
+    u["h"].update(data)
+    u["received"] += len(data)
+    u["ts"] = time.time()
+    return {"received": u["received"]}
+
+
+@app.post("/api/upload/{uid}/finish")
+async def upload_finish(uid: str):
+    u = _session(uid)
+    if u["received"] != u["size"]:
+        raise HTTPException(400, f"Filen er ikke modtaget helt ({u['received']} af {u['size']} bytes)")
+    _uploads.pop(uid, None)
+    return await _complete(u["tmp"], u["target"], u["h"].hexdigest(), u["mtime"], background=True)
+
+
+@app.delete("/api/upload/{uid}")
+def upload_cancel(uid: str):
+    u = _uploads.pop(uid, None)
+    if u:
+        u["tmp"].unlink(missing_ok=True)
+    return {"ok": True}
 
 
 @app.get("/api/exists")

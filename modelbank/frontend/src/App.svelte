@@ -39,6 +39,8 @@
     try {
       const r = await get(`api/models?${p}`);
       items = r.items; fhError = r.fh_error; loaded = true;
+      clearTimeout(pendingT);
+      if (r.items.some((i) => i.pending)) pendingT = setTimeout(load, 3000);   // big files are still being read
       const missing = r.items.filter((i) => i.mesh && !i.thumb).map((i) => i.id);
       if (missing.length) requestThumbs(missing, (id) => { const it = items.find((x) => x.id === id); if (it) it.thumb = 'client'; bust[id] = Date.now(); });
     } catch (e) { toast(e.message, true); }
@@ -49,7 +51,7 @@
       folders = f.folders; total = f.total; tags = t.tags;
     } catch { /* list still works */ }
   }
-  let lt;
+  let lt, pendingT;
   $effect(() => { q; folder; tag; fav; sort; grouped; clearTimeout(lt); lt = setTimeout(load, q ? 250 : 0); });
   onMount(loadMeta);
   const refresh = () => { load(); loadMeta(); };
@@ -203,6 +205,7 @@
                 {#if (it.group_printed ?? it.printed)}<span class="badge accent pr">Printet {it.group_printed ?? it.printed}×</span>{/if}
                 {#if it.versions > 1}<span class="badge vers">{it.versions} versioner</span>{/if}
                 {#if it.favorite}<span class="star">★</span>{/if}
+                {#if it.pending}<span class="badge pend"><span class="spinner sm"></span> Læses …</span>{/if}
                 {#if selecting}<span class="tick" class:on={selected[it.id]}><Icon name="check" size={16} /></span>
                 {:else}<button class="del" aria-label={`Slet ${it.name}`} title="Slet" onclick={(e) => { e.preventDefault(); e.stopPropagation(); askDelete([it]); }}><Icon name="trash" size={16} /></button>{/if}
               </div>
@@ -288,6 +291,8 @@
   .pic img.photo { object-fit: cover; }
   .ph { position: absolute; inset: 0; display: grid; place-items: center; }
   .pr { position: absolute; left: 8px; top: 8px; }
+  .pend { position: absolute; left: 8px; bottom: 8px; background: rgba(10,12,14,.78); gap: 6px; }
+  .spinner.sm { width: 12px; height: 12px; border-width: 2px; }
   .vers { position: absolute; right: 8px; bottom: 8px; background: rgba(10,12,14,.78); color: var(--text); }
   .stack3 { box-shadow: 4px 4px 0 -1px var(--bg), 4px 4px 0 0 var(--panel-border-hi), 8px 8px 0 -1px var(--bg), 8px 8px 0 0 var(--panel-border); }
   .grp { gap: 6px; cursor: pointer; white-space: nowrap; }

@@ -203,7 +203,9 @@ def duplicate_of(db: Database, sha: str) -> dict | None:
     return None
 
 
-def finish_upload(db: Database, tmp: Path, target: Path) -> int:
+def finish_upload(db: Database, tmp: Path, target: Path, background: bool = False) -> int:
+    """Moves the upload into place and reads it. background=True (big files): the row exists at once, marked
+    pending, and the model is read in a thread so the request does not wait for it (Ingress may time out)."""
     try:
         if tmp.stat().st_size == 0:
             raise LibraryError("Filen er tom")
@@ -212,7 +214,29 @@ def finish_upload(db: Database, tmp: Path, target: Path) -> int:
         os.replace(tmp, target)
     finally:
         tmp.unlink(missing_ok=True)
-    return ingest(db, target)
+    if not background:
+        return ingest(db, target)
+    st = target.stat()
+    mid = db.insert(_rel(target), target.stem, st.st_size, st.st_mtime, {"v": 0, "pending": True}, "")
+    sha = file_sha(target)
+    db.set_fields(mid, {"sha": sha})
+
+    def work():
+        with _scan_lock:                       # never at the same time as a scan of the same file
+            try:
+                ingest(db, target)
+            except Exception:
+                log.exception("reading %s", target)
+                m = db.model(mid)
+                if m:
+                    db.update_file(mid, m["size"], m["mtime"], {"v": parse.PARSE_VERSION, "error": "kunne ikke læses"}, "")
+        try:
+            from . import main as _main        # late import: link the new model to its prints once it is read
+            _main.prints.sync(db, _main.fh, mid)
+        except Exception as e:                 # FilamentHub not set up / unreachable: the background sync catches up
+            log.info("sync after upload: %s", e)
+    threading.Thread(target=work, name=f"read-{mid}", daemon=True).start()
+    return mid
 
 
 def move(db: Database, mid: int, folder: str) -> dict:

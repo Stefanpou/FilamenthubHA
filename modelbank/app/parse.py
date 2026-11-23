@@ -84,12 +84,73 @@ def _stl(data: bytes, out: Parsed) -> None:
     out.meta["mesh"] = True
 
 
+def decimate(verts: list[float], tris: list[int], target: int) -> tuple[list[float], list[int]]:
+    """Vertex clustering like FilamentHub's, but for big STL files: the grid is estimated from the triangle count
+    (surface detail scales with grid size squared) and refined from the first result, so it takes one or two passes
+    instead of walking down nine grid sizes (800k triangles: ~10 s instead of ~70 s)."""
+    n = len(tris) // 3
+    if n <= target:
+        return verts, tris
+    xs, ys, zs = verts[0::3], verts[1::3], verts[2::3]
+    mn = (min(xs), min(ys), min(zs))
+    ext = max(max(xs) - mn[0], max(ys) - mn[1], max(zs) - mn[2]) or 1.0
+    g = 400.0
+    best = None
+    for _ in range(6):
+        v, t = _cluster(verts, tris, mn, ext / g)
+        got = len(t) // 3
+        if got <= target:
+            best = (v, t)
+            if got >= target * 0.5 or g >= 400:
+                return best
+            g *= min(2.0, (target / max(got, 1)) ** 0.5 * 0.9)   # too coarse: finer
+        else:
+            g /= max(1.15, (got / target) ** 0.5 * 1.1)           # too fine: coarser
+        if g < 8:
+            g = 8
+    return best or _cluster(verts, tris, mn, ext / 8)
+
+
+def _cluster(verts, tris, mn, cell):
+    cluster: dict[tuple[int, int, int], int] = {}
+    acc: list[list[float]] = []
+    remap: list[int] = []
+    mx, my, mz = mn
+    for i in range(0, len(verts), 3):
+        key = (int((verts[i] - mx) / cell), int((verts[i + 1] - my) / cell), int((verts[i + 2] - mz) / cell))
+        ci = cluster.get(key)
+        if ci is None:
+            ci = cluster[key] = len(acc)
+            acc.append([0.0, 0.0, 0.0, 0])
+        a = acc[ci]
+        a[0] += verts[i]
+        a[1] += verts[i + 1]
+        a[2] += verts[i + 2]
+        a[3] += 1
+        remap.append(ci)
+    out_t: list[int] = []
+    seen = set()
+    for i in range(0, len(tris), 3):
+        a, b, c = remap[tris[i]], remap[tris[i + 1]], remap[tris[i + 2]]
+        if a == b or b == c or a == c:
+            continue
+        k = (a, b, c) if a < b and a < c else ((b, c, a) if b < c else (c, a, b))
+        if k in seen:
+            continue
+        seen.add(k)
+        out_t += (a, b, c)
+    nv: list[float] = []
+    for a in acc:
+        nv += (a[0] / a[3], a[1] / a[3], a[2] / a[3])
+    return nv, out_t
+
+
 def _mesh(verts: list[float], tris: list[int]) -> tuple[bytes, list[float]]:
     minx, miny, minz = min(verts[0::3]), min(verts[1::3]), min(verts[2::3])
     maxx, maxy = max(verts[0::3]), max(verts[1::3])
     # centre on the 256 mm plate, standing on it
     dx, dy, dz = 128 - (minx + maxx) / 2, 128 - (miny + maxy) / 2, -minz
-    v, t = m3d._decimate(verts, tris, m3d.MAX_TRIANGLES)
+    v, t = decimate(verts, tris, m3d.MAX_TRIANGLES)
     v = [c + (dx, dy, dz)[i % 3] for i, c in enumerate(v)]
     bbox = [min(v[0::3]), min(v[1::3]), min(v[2::3]), max(v[0::3]), max(v[1::3]), max(v[2::3])]
     dims = [round(bbox[3] - bbox[0], 1), round(bbox[4] - bbox[1], 1), round(bbox[5] - bbox[2], 1)]

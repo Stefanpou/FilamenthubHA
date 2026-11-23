@@ -19,7 +19,57 @@ export function enqueue(files) {
   if (!uq.running) run();
 }
 
+// Home Assistant's Ingress proxy refuses request bodies over 16 MB, so bigger files go in 8 MB pieces.
+const SINGLE_MAX = 12 * 1024 * 1024;
+let aborted = false;
+
+function xhrPost(url, body, onProgress) {
+  return new Promise((resolve, reject) => {
+    xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.setRequestHeader('Content-Type', body instanceof Blob || body instanceof ArrayBuffer ? 'application/octet-stream' : 'application/json');
+    if (onProgress) xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded);
+    xhr.onload = () => {
+      let d = null;
+      try { d = JSON.parse(xhr.responseText); } catch { /* */ }
+      if (xhr.status < 300) resolve(d);
+      else reject(Object.assign(new ApiError((d && d.detail) || `Fejl ${xhr.status}`, xhr.status), { data: d }));
+    };
+    xhr.onerror = () => reject(new ApiError('Forbindelsen blev afbrudt', 0));
+    xhr.onabort = () => reject(new ApiError('Stoppet', -1));
+    xhr.send(body);
+  });
+}
+
+async function sendChunked(file, folder, mtime, onProgress) {
+  const t = mtime || file.lastModified;
+  const st = await xhrPost('api/upload/start', JSON.stringify({ name: file.name, folder, size: file.size, mtime: t ? Math.floor(t / 1000) : null }));
+  const id = st.upload_id, cs = st.chunk_size || 8 * 1024 * 1024;
+  let off = 0, tries = 0;
+  try {
+    while (off < file.size) {
+      if (aborted) throw new ApiError('Stoppet', -1);
+      try {
+        const r = await xhrPost(`api/upload/${id}/chunk?offset=${off}`, file.slice(off, off + cs), (n) => onProgress(off + n));
+        off = r.received;
+        tries = 0;
+      } catch (e) {
+        if (e.status === -1) throw e;
+        if (e.status === 409 && e.data?.received != null) { off = e.data.received; continue; }   // server is elsewhere: go on from there
+        if (++tries > 4 || (e.status >= 400 && e.status < 500)) throw e;
+        await new Promise((r) => setTimeout(r, 1000 * 2 ** tries));                                 // network hiccup: retry this piece
+      }
+    }
+    onProgress(file.size);
+    return await xhrPost(`api/upload/${id}/finish`, '{}');
+  } catch (e) {
+    fetch(`api/upload/${id}`, { method: 'DELETE' }).catch(() => {});
+    throw e;
+  }
+}
+
 function send(file, folder, mtime, onProgress) {
+  if (file.size > SINGLE_MAX) return sendChunked(file, folder, mtime, onProgress);
   return new Promise((resolve, reject) => {
     xhr = new XMLHttpRequest();
     const t = mtime || file.lastModified;
@@ -38,7 +88,7 @@ function send(file, folder, mtime, onProgress) {
   });
 }
 
-const PRECHECK_MAX = 300 * 1024 * 1024;   // hash in the browser up to this size; bigger files are checked by the server
+const PRECHECK_MAX = 150 * 1024 * 1024;   // hash in the browser up to this size; bigger files are checked by the server
 
 async function sha256(file) {
   if (!crypto?.subtle || file.size > PRECHECK_MAX) return null;
@@ -48,6 +98,7 @@ async function sha256(file) {
 
 async function run() {
   uq.running = true;
+  aborted = false;
   samples = [];
   let it;
   while ((it = uq.items.find((x) => x.state === 'wait'))) {
@@ -97,6 +148,7 @@ function dup(it, relpath) {
 }
 
 export function stop() {
+  aborted = true;
   for (const it of uq.items) if (it.state === 'wait') { it.state = 'stopped'; it.err = 'Stoppet'; }
   xhr?.abort();
 }

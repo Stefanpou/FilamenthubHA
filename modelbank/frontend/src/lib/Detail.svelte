@@ -16,8 +16,11 @@
     err = '';
     try { set(await get(`api/models/${id}`)); } catch (e) { err = e.message; }
   }
+  let pendT;
   function set(d) {
     m = d;
+    clearTimeout(pendT);
+    if (d.pending) pendT = setTimeout(load, 3000);
     const need = (d.versions || []).filter((v) => v.mesh && !v.thumb && !v.photo).map((v) => v.id);
     if (need.length) requestThumbs(need, (vid) => { const v = m?.versions?.find((x) => x.id === vid); if (v) { v.thumb = 'client'; v.mtime = v.mtime + 0.001; } });
     man = { grams: d.manual?.grams ?? '', minutes: d.manual?.minutes ?? '', material: d.manual?.material ?? '' };
@@ -101,6 +104,7 @@
         <svg viewBox="0 0 24 24" width="22" height="22" fill={m.favorite ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
       </button>
     </div>
+    {#if m.pending}<div class="alert info"><span class="spinner"></span> Filen er stor og læses stadig – billede, 3D og filamentdata kommer om lidt.</div>{/if}
     <div class="row wrap facts small muted">
       <span class="badge">{m.kind === 'stl' ? 'STL' : '3MF'}</span>
       {#if m.dims}<span class="mono">{m.dims.map((d) => num(d, 1)).join(' × ')} mm</span>{/if}
