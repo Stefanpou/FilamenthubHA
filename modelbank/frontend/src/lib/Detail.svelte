@@ -105,7 +105,7 @@
       <span class="badge">{m.kind === 'stl' ? 'STL' : '3MF'}</span>
       {#if m.dims}<span class="mono">{m.dims.map((d) => num(d, 1)).join(' × ')} mm</span>{/if}
       {#if m.plates > 1}<span>{m.plates} plader</span>{/if}
-      <span>{bytes(m.size)}</span><span>Tilføjet {date(m.added)}</span>
+      <span>{bytes(m.size)}</span><span>Gemt {date(m.date)}</span><span>Tilføjet {date(m.added)}</span>
       {#if m.printed}<span class="badge accent">Printet {m.printed}×</span>{/if}
       {#if m.error}<span class="badge danger">Kunne ikke læse filen: {m.error}</span>{/if}
     </div>
@@ -118,7 +118,7 @@
           {#each m.versions as v, i (v.id)}
             <a class="ver" class:on={v.id === m.id} href={`#/m/${v.id}`} title={v.file}>
               <span class="vpic">{#if v.photo}<img src={`api/models/${v.id}/photos/${v.photo}.jpg`} alt="" class="ph" loading="lazy">{:else if v.thumb}<img src={`api/models/${v.id}/thumb?v=${v.mtime}`} alt="" loading="lazy">{/if}</span>
-              <span class="vtx"><b class="ellipsis">{v.name}</b><span class="tiny muted">{i === 0 ? 'Nyeste · ' : ''}{date(v.mtime)}{v.printed ? ` · printet ${v.printed}×` : ''}</span></span>
+              <span class="vtx"><b class="ellipsis">{v.name}</b><span class="tiny muted">{i === 0 ? 'Nyeste · ' : ''}{date(v.date)}{v.printed ? ` · printet ${v.printed}×` : ''}</span></span>
             </a>
           {/each}
         </div>

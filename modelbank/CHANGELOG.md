@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+- »Nyeste version« bruger nu tidspunktet, hvor 3MF-filen blev gemt i Bambu Studio/OrcaSlicer (det står inde i filen), i stedet for upload-tidspunktet. Filer, der er uploadet samtidig, kommer derfor i den rigtige rækkefølge. Eksisterende filer læses igen automatisk.
+- Modelbank-siden genindlæser sig selv, når der er installeret en ny version.
+- Newest version = save time stored inside the 3MF; the page reloads itself after an update.
+
 ## 0.4.0
 
 - Ny side »Find på computeren«: vælg en eller flere mapper på den computer, du sidder ved (fx Dokumenter, Downloads eller BambuStudio-mappen). Modelbank gennemsøger dem med undermapper, viser hvilke .3mf/.stl der er nye, og hvilke der allerede findes (samme navn og størrelse), og uploader dem, du vælger – med eller uden mappestrukturen. Skjulte mapper, AppData og systemmapper springes over.

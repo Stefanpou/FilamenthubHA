@@ -75,6 +75,7 @@ def _card(m: dict, pc: dict | None = None) -> dict:
     pc = pc if pc is not None else db.print_counts().get(m["id"]) or {}
     return {"id": m["id"], "name": m["name"], "file": m["relpath"].rsplit("/", 1)[-1], "folder": _folder_of(m),
             "relpath": m["relpath"], "size": m["size"], "added": m["added"], "mtime": m["mtime"],
+            "date": groups.file_date(m),
             "kind": meta.get("kind"), "tags": m["tags"], "favorite": m["favorite"], "designer": m["designer"],
             "thumb": m["thumb"], "mesh": bool(meta.get("mesh")), "grams": _grams(m), "seconds": _seconds(m),
             "filaments": [{"type": f.get("type"), "color": f.get("color")} for f in meta.get("filaments") or []],

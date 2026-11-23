@@ -7,6 +7,7 @@ import json
 import logging
 import re
 import struct
+import time
 import zipfile
 
 from . import fh_model3d as m3d
@@ -16,7 +17,7 @@ log = logging.getLogger("modelbank.parse")
 MAX_THUMB = 5 * 1024 * 1024
 THUMBS = ("Metadata/plate_1.png", "Metadata/thumbnail.png", "Auxiliaries/.thumbnails/thumbnail_3mf.png",
           "Auxiliaries/.thumbnails/thumbnail_middle.png", "Metadata/plate_1_small.png")
-PARSE_VERSION = 1
+PARSE_VERSION = 2
 
 
 class Parsed:
@@ -107,6 +108,7 @@ def _3mf(data: bytes, out: Parsed) -> None:
     names = set(z.namelist())
     meta = out.meta
     meta["kind"] = "3mf"
+    meta["saved"] = saved_time(z)
 
     def read(n, limit=m3d.MAX_TEXT):
         return m3d.read_limited(z, n, limit) if n in names else None
@@ -169,6 +171,20 @@ def _3mf(data: bytes, out: Parsed) -> None:
     except m3d.ModelError as e:
         meta["mesh"] = False
         meta["mesh_error"] = str(e)
+
+
+def saved_time(z: zipfile.ZipFile) -> float | None:
+    """When the slicer last saved the project: the newest time stamp of the entries inside the 3MF. Survives copying
+    and uploading (the file system date does not). Zip times are local time of the saving computer, 2 s resolution."""
+    best = None
+    for zi in z.infolist():
+        try:
+            t = time.mktime((*zi.date_time, 0, 0, -1))
+        except (OverflowError, ValueError):
+            continue
+        if 946684800 < t < time.time() + 86400 and (best is None or t > best):   # 2000 .. tomorrow
+            best = t
+    return best
 
 
 def _header(blob: bytes) -> dict:

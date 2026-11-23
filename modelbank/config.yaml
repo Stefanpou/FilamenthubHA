@@ -1,5 +1,5 @@
 name: Modelbank
-version: "0.4.0"
+version: "0.4.1"
 slug: modelbank
 description: 3D-modeller (STL/3MF) med lager, printhistorik og pris fra FilamentHub
 url: https://github.com/Stefanpou/FilamenthubHA

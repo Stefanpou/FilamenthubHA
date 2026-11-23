@@ -39,6 +39,11 @@ def related(a: list[str], b: list[str]) -> bool:
     return len(c) == 1 and len(c[0]) >= MIN_WORD
 
 
+def file_date(m: dict) -> float:
+    """The model's own date: when the 3MF was saved (from inside the file), else the file's date on disk."""
+    return ((m.get("meta") or {}).get("saved")) or m.get("mtime") or 0
+
+
 def folder_of(m: dict) -> str:
     return m["relpath"].rsplit("/", 1)[0] if "/" in m["relpath"] else ""
 
@@ -48,7 +53,7 @@ def stem(m: dict) -> str:
 
 
 def group(models: list[dict]) -> list[list[dict]]:
-    """Groups, each sorted newest file first (file date, then added); groups in the input's order of their newest."""
+    """Groups, each sorted newest first (file_date, then added); groups in the input's order of their newest."""
     ids = [m["id"] for m in models]
     parent = {i: i for i in ids}
 
@@ -85,7 +90,7 @@ def group(models: list[dict]) -> list[list[dict]]:
     groups: dict[int, list[dict]] = {}
     for m in models:
         groups.setdefault(find(m["id"]), []).append(m)
-    out = [sorted(g, key=lambda m: (m.get("mtime") or 0, m.get("added") or 0), reverse=True) for g in groups.values()]
+    out = [sorted(g, key=lambda m: (file_date(m), m.get("added") or 0), reverse=True) for g in groups.values()]
     order = {m["id"]: i for i, m in enumerate(models)}
     out.sort(key=lambda g: min(order[m["id"]] for m in g))
     return out
