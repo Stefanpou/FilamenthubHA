@@ -73,6 +73,31 @@
 
   // ---- upload (button + drag & drop anywhere)
   let drag = $state(0), fileInput;
+
+  // ---- delete from the overview (one card, or several in select mode); files go to .slettet
+  let selecting = $state(false), selected = $state({}), ask = $state(null), deleting = $state(false);
+  const selCards = $derived(items.filter((it) => selected[it.id]));
+  const idsOf = (cards, all) => [...new Set(cards.flatMap((c) => (all && c.version_ids ? c.version_ids : [c.id])))];
+  function askDelete(cards) {
+    if (!cards.length) return;
+    const more = idsOf(cards, true).length - cards.length;
+    ask = { cards, more, all: false };
+  }
+  async function doDelete() {
+    const ids = idsOf(ask.cards, ask.all);
+    deleting = true;
+    try {
+      const r = await post('api/models/delete', { ids });
+      toast(`${r.moved} ${r.moved === 1 ? 'model' : 'modeller'} flyttet til .slettet${r.failed.length ? ` – ${r.failed.length} fejlede` : ''}`, !!r.failed.length);
+      ask = null; selected = {}; selecting = false;
+      refresh();
+    } catch (e) { toast(e.message, true); } finally { deleting = false; }
+  }
+  function cardClick(e, it) {
+    if (!selecting) return;
+    e.preventDefault();
+    selected[it.id] = !selected[it.id];
+  }
   const OK = /\.(3mf|stl)$/i;
   function send(files) {
     const list = [...files].filter((f) => OK.test(f.name));
@@ -145,10 +170,21 @@
             <option value="added">Nyeste</option><option value="name">Navn</option><option value="printed">Mest printet</option><option value="size">Størst</option>
           </select>
           <label class="row small dim grp" title="Vis kun den nyeste version af hver model"><input type="checkbox" bind:checked={grouped}> Grupér versioner</label>
+          <button class="btn" class:on={selecting} onclick={() => { selecting = !selecting; selected = {}; }}><Icon name="check" size={18} /> {selecting ? 'Færdig' : 'Vælg'}</button>
           <button class="btn" onclick={scan} disabled={scanning} title="Find filer lagt ind via Samba"><Icon name="refresh" size={18} /> {scanning ? 'Scanner …' : 'Scan'}</button>
         </div>
       </div>
       {#if fhError}<div class="alert warn">FilamentHub: {fhError}</div>{/if}
+      {#if selecting}
+        <div class="selbar glass row wrap between">
+          <span class="small">{selCards.length ? `${selCards.length} valgt` : 'Klik på de modeller, du vil slette'}</span>
+          <span class="row wrap">
+            <button class="btn small" onclick={() => { selected = Object.fromEntries(items.map((i) => [i.id, true])); }}>Vælg alle ({items.length})</button>
+            {#if selCards.length}<button class="btn small" onclick={() => (selected = {})}>Fravælg</button>{/if}
+            <button class="btn small danger" disabled={!selCards.length} onclick={() => askDelete(selCards)}><Icon name="trash" size={16} /> Slet valgte</button>
+          </span>
+        </div>
+      {/if}
 
       {#if !loaded}
         <div class="grid">{#each Array(8) as _}<div class="skeleton" style="aspect-ratio:3/4"></div>{/each}</div>
@@ -161,12 +197,14 @@
       {:else}
         <div class="grid">
           {#each items as it, i (it.id)}
-            <a class="card glass rise" class:stack3={it.versions > 1} style="--i:{i}" href={`#/m/${it.id}`}>
+            <a class="card glass rise" class:stack3={it.versions > 1} class:sel={selected[it.id]} class:selecting style="--i:{i}" href={`#/m/${it.id}`} onclick={(e) => cardClick(e, it)}>
               <div class="pic">
                 {#if (it.photo || it.group_photo || it.thumb) && !broken[it.id]}<img class:photo={it.photo || it.group_photo} src={thumbSrc(it)} alt="" loading="lazy" onerror={() => (broken[it.id] = true)}>{:else}<div class="ph"><span class="badge">{it.kind === 'stl' ? 'STL' : '3MF'}</span></div>{/if}
                 {#if (it.group_printed ?? it.printed)}<span class="badge accent pr">Printet {it.group_printed ?? it.printed}×</span>{/if}
                 {#if it.versions > 1}<span class="badge vers">{it.versions} versioner</span>{/if}
                 {#if it.favorite}<span class="star">★</span>{/if}
+                {#if selecting}<span class="tick" class:on={selected[it.id]}><Icon name="check" size={16} /></span>
+                {:else}<button class="del" aria-label={`Slet ${it.name}`} title="Slet" onclick={(e) => { e.preventDefault(); e.stopPropagation(); askDelete([it]); }}><Icon name="trash" size={16} /></button>{/if}
               </div>
               <div class="body stack">
                 <b class="nm" title={it.name}>{it.name}</b>
@@ -193,6 +231,23 @@
 {/if}
 
 <UploadPanel />
+
+{#if ask}
+  <div class="scrim" role="presentation" onclick={(e) => e.target === e.currentTarget && !deleting && (ask = null)}>
+    <div class="sheet glass pad stack" role="alertdialog" aria-label="Slet">
+      <h2>{ask.cards.length === 1 ? `Slet »${ask.cards[0].name}«?` : `Slet ${ask.cards.length} modeller?`}</h2>
+      {#if ask.more}
+        <div class="stack" style="gap:6px">
+          <label class="row small"><input type="radio" name="delv" checked={!ask.all} onchange={() => (ask.all = false)}> Kun {ask.cards.length === 1 ? 'den viste version' : 'de viste versioner'}</label>
+          <label class="row small"><input type="radio" name="delv" checked={ask.all} onchange={() => (ask.all = true)}> Også de ældre versioner ({ask.more} {ask.more === 1 ? 'fil' : 'filer'} mere)</label>
+        </div>
+      {/if}
+      <p class="small dim">{idsOf(ask.cards, ask.all).length} {idsOf(ask.cards, ask.all).length === 1 ? 'fil flyttes' : 'filer flyttes'} til <span class="mono">.slettet</span> i /share/modelbank, så du kan fortryde fra Samba. Tags, noter og koblinger til prints slettes.</p>
+      <div class="row" style="justify-content:flex-end"><button class="btn" disabled={deleting} onclick={() => (ask = null)}>Annullér</button>
+        <button class="btn danger" disabled={deleting} onclick={doDelete}><Icon name="trash" size={16} /> {deleting ? 'Sletter …' : 'Slet'}</button></div>
+    </div>
+  </div>
+{/if}
 
 <div class="toasts">{#each toasts as t (t.id)}<div class="toast" class:bad={t.bad}>{t.text}</div>{/each}</div>
 
@@ -236,6 +291,21 @@
   .vers { position: absolute; right: 8px; bottom: 8px; background: rgba(10,12,14,.78); color: var(--text); }
   .stack3 { box-shadow: 4px 4px 0 -1px var(--bg), 4px 4px 0 0 var(--panel-border-hi), 8px 8px 0 -1px var(--bg), 8px 8px 0 0 var(--panel-border); }
   .grp { gap: 6px; cursor: pointer; white-space: nowrap; }
+  .del { position: absolute; right: 8px; top: 8px; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--panel-border-hi);
+    background: rgba(10,12,14,.72); color: #f0a3a6; display: grid; place-items: center; cursor: pointer; opacity: 0; transition: opacity .14s; }
+  .card:hover .del, .del:focus-visible { opacity: 1; }
+  @media (hover: none) { .del { opacity: 1; } }
+  .del:hover { background: color-mix(in srgb, var(--danger) 30%, #111); color: #fff; }
+  .card:has(.del) .star { right: 46px; }
+  .tick { position: absolute; right: 8px; top: 8px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,.7);
+    background: rgba(10,12,14,.55); display: grid; place-items: center; color: transparent; }
+  .tick.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .card.selecting { cursor: pointer; }
+  .card.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .selbar { padding: 8px 12px; gap: 8px; }
+  .btn.on { border-color: var(--accent); color: var(--accent); }
+  .scrim { position: fixed; inset: 0; z-index: 250; background: rgba(0,0,0,.55); display: grid; place-items: center; padding: 16px; }
+  .sheet { width: 100%; max-width: 460px; background: var(--panel-solid); }
   .star { position: absolute; right: 10px; top: 6px; color: #f3c14b; font-size: 18px; }
   .body { padding: 10px 12px 12px; gap: 6px; }
   .nm { font-weight: 500; font-size: 14px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; min-height: 2.6em; }

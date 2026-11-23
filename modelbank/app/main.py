@@ -150,6 +150,7 @@ def list_models(q: str = Query("", max_length=200), folder: str | None = Query(N
                 c = _card(gnewest[head], counts.get(head) or {})   # the group shows its newest version
             members = [m for m in rows if gid.get(m["id"]) == head]
             c["versions"] = gsize.get(head, 1)
+            c["version_ids"] = [m["id"] for m in members]
             c["group_printed"] = sum((counts.get(m["id"]) or {}).get("n", 0) for m in members)
             if not c["photo"]:
                 c["group_photo"] = next(([m["id"], (counts.get(m["id"]) or {}).get("photo")] for m in members
@@ -334,6 +335,25 @@ def delete_model(mid: int):
     except (library.LibraryError, OSError) as e:
         _err(e)
     return {"ok": True}
+
+
+class DeleteBody(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=5000)
+
+
+@app.post("/api/models/delete")
+def delete_many(body: DeleteBody):
+    """Moves several models to .slettet at once (the overview's delete / select mode)."""
+    moved, failed = 0, []
+    for mid in dict.fromkeys(body.ids):
+        if not db.model(mid):
+            continue
+        try:
+            library.trash(db, mid)
+            moved += 1
+        except (library.LibraryError, OSError) as e:
+            failed.append({"id": mid, "error": str(e)})
+    return {"moved": moved, "failed": failed}
 
 
 class LinkBody(BaseModel):

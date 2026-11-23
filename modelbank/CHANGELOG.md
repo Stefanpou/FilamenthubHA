@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.2
+
+- Slet direkte fra oversigten: papirkurv på hvert kort (vises, når musen er over kortet; altid på telefon). På en versionsgruppe vælger du, om kun den viste version eller også de ældre skal slettes.
+- »Vælg« øverst: klik på flere kort (eller »Vælg alle«) og slet dem på én gang. Filerne flyttes til `.slettet`, så de kan fortrydes.
+- Delete from the overview: trash button per card and a select mode for several at once.
+
 ## 0.5.1
 
 - Indstillinger → Dubletter viser filer, der ligger flere gange med præcis samme indhold (fx fra tidligere uploads), og »Ryd op« beholder én af hver med samlede tags, noter, favorit og printhistorik. Kopierne flyttes til `.slettet`.
