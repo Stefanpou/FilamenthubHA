@@ -436,6 +436,12 @@ async def upload(request: Request, name: str = Query(min_length=1, max_length=30
     return _card(db.model(mid))
 
 
+@app.get("/api/fingerprints")
+def fingerprints():
+    """Name + size of every model file, so the browser can tell which files on the computer are already here."""
+    return {"files": [{"name": m["relpath"].rsplit("/", 1)[-1], "size": m["size"], "id": m["id"]} for m in db.models()]}
+
+
 @app.post("/api/scan")
 def scan_now():
     fh.clear()

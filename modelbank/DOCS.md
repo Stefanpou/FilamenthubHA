@@ -13,6 +13,8 @@ Modelbank er et bibliotek over dine 3D-modeller (**.3mf** og **.stl**) i Home As
 Modellerne ligger i Home Assistants delte mappe: `/share/modelbank`. Undermapper bliver til mapper i Modelbank.
 
 - **Upload:** træk filer ind på siden, eller tryk **Upload modeller**. De lægges i den mappe, du står i.
+- **Find på computeren:** vælg mapper på den computer, du sidder ved. Modelbank finder alle .3mf/.stl i dem (med
+  undermapper), viser hvilke der er nye, og uploader dem, du vælger. Chrome og Edge husker mapperne til næste scan.
 - **Samba / fildeling:** læg filer i `share/modelbank`. De dukker op inden for 10 minutter, eller med det samme når du
   trykker **Scan**.
 - **Versioner:** filer i samme mappe, hvis navne starter med de samme ord, vises som ét kort med den nyeste version.

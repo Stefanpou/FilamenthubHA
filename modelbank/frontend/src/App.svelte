@@ -2,6 +2,7 @@
   import Icon from './lib/Icon.svelte';
   import Detail from './lib/Detail.svelte';
   import Settings from './lib/Settings.svelte';
+  import Finder from './lib/Finder.svelte';
   import { get, post, upload, num, dur } from './lib/api.js';
   import { requestThumbs } from './lib/thumbs.js';
   import { onMount } from 'svelte';
@@ -11,6 +12,7 @@
   onMount(() => { const f = () => (hash = location.hash); addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); });
   const detailId = $derived((hash.match(/^#\/m\/(\d+)/) || [])[1]);
   const settings = $derived(hash.startsWith('#/settings'));
+  const finder = $derived(hash.startsWith('#/find'));
   const go = (h) => { location.hash = h; };
 
   // ---- list state
@@ -109,13 +111,14 @@
       <span>Modelbank</span></a>
     <button class="btn primary up" onclick={() => fileInput.click()}><Icon name="upload" size={18} /> Upload modeller</button>
     <input type="file" multiple accept=".3mf,.stl" hidden bind:this={fileInput} onchange={(e) => { send(e.target.files); e.target.value = ''; }}>
-    <button class="item" class:on={folder === null && !fav && !detailId && !settings} onclick={() => { folder = null; fav = false; go('#/'); }}><Icon name="grid" size={18} /> Alle modeller <span class="n mono">{total}</span></button>
-    <button class="item" class:on={fav && !detailId && !settings} onclick={() => { fav = !fav; go('#/'); }}>
+    <button class="item" class:on={finder} onclick={() => go('#/find')}><Icon name="search" size={18} /> Find på computeren</button>
+    <button class="item" class:on={folder === null && !fav && !detailId && !settings && !finder} onclick={() => { folder = null; fav = false; go('#/'); }}><Icon name="grid" size={18} /> Alle modeller <span class="n mono">{total}</span></button>
+    <button class="item" class:on={fav && !detailId && !settings && !finder} onclick={() => { fav = !fav; go('#/'); }}>
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg> Favoritter</button>
     <div class="sect row between"><span class="eyebrow">Mapper</span><button class="btn ghost small" aria-label="Ny mappe" title="Ny mappe" onclick={newFolder}><Icon name="plus" size={16} /></button></div>
     <div class="folders">
       {#each folders as f}
-        <button class="item fold" class:on={folder === f.path && !detailId && !settings} style="--d:{depth(f.path)}" onclick={() => { folder = f.path; go('#/'); }}>
+        <button class="item fold" class:on={folder === f.path && !detailId && !settings && !finder} style="--d:{depth(f.path)}" onclick={() => { folder = f.path; go('#/'); }}>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></svg>
           <span class="ellipsis">{f.path.split('/').pop()}</span><span class="n mono">{f.count}</span></button>
       {:else}<div class="tiny muted pad0">Ingen mapper endnu</div>{/each}
@@ -128,7 +131,9 @@
   </nav>
 
   <main>
-    {#if settings}
+    {#if finder}
+      <Finder {folders} {toast} onDone={refresh} onClose={() => go('#/')} />
+    {:else if settings}
       <Settings onClose={() => { go('#/'); refresh(); }} {toast} />
     {:else if detailId}
       {#key detailId}<Detail id={+detailId} {folders} {toast} onClose={() => go('#/')} onChanged={refresh} />{/key}

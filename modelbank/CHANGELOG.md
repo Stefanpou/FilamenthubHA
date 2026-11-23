@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+- Ny side »Find på computeren«: vælg en eller flere mapper på den computer, du sidder ved (fx Dokumenter, Downloads eller BambuStudio-mappen). Modelbank gennemsøger dem med undermapper, viser hvilke .3mf/.stl der er nye, og hvilke der allerede findes (samme navn og størrelse), og uploader dem, du vælger – med eller uden mappestrukturen. Skjulte mapper, AppData og systemmapper springes over.
+- I Chrome og Edge huskes mapperne, så »Scan gemte mapper igen« finder nye filer næste gang. En webside kan af sikkerhedshensyn ikke selv gennemsøge hele computeren; du vælger mapperne.
+- New "Find på computeren" page: scan chosen folders on the client for .3mf/.stl, compare with the library and upload the new ones.
+
 ## 0.3.0
 
 - Versioner af samme model grupperes: filer i samme mappe, hvis navne starter med de samme ord (fx `yubikey_5c_nfc_v2`, `yubikey_5c_nfc_lock`, `yubikey_noglering`), vises som ét kort med den nyeste version og »N versioner«. Inde på modellen ses alle versioner, nyeste først. Generiske ord som »Bambu Lab X2D« eller »holder« tæller ikke.
